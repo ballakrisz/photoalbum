@@ -39,7 +39,7 @@ def photo_upload(request):
 
         return redirect("photo_list")
 
-    return render(request, "album/upload_photo.html")
+    return render(request, "album/photo_upload.html")
 
 @login_required
 def photo_delete(request, pk):
