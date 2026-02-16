@@ -1,14 +1,20 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ photo.name }}</title>
-</head>
-<body>
-    <h1>{{ photo.name }}</h1>
-    <p>Uploaded at: {{ photo.uploaded_at }}</p>
+{% extends "base.html" %}
+{% block content %}
 
-    <img src="{{ photo.image.url }}" style="max-width: 600px;" />
+<div class="card shadow-lg">
+    <img src="{{ photo.image.url }}" class="card-img-top">
+    <div class="card-body">
+        <h3>{{ photo.title }}</h3>
 
-    <p><a href="/">Back to list</a></p>
-</body>
-</html>
+        {% if user == photo.user %}
+        <form method="post" action="{% url 'photo_delete' photo.pk %}">
+            {% csrf_token %}
+            <button class="btn btn-danger mt-3">Delete</button>
+        </form>
+        {% endif %}
+
+        <a href="{% url 'photo_list' %}" class="btn btn-secondary mt-3">Back</a>
+    </div>
+</div>
+
+{% endblock %}

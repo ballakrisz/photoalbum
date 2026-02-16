@@ -14,7 +14,7 @@ def photo_detail(request, pk):
     return render(request, 'album/photo_detail.html', {'photo': photo})
 
 @login_required
-def upload_photo(request):
+def photo_upload(request):
     if request.method == 'POST':
         form = PhotoForm(request.POST, request.FILES)
         if form.is_valid():
@@ -27,11 +27,12 @@ def upload_photo(request):
     return render(request, 'album/upload.html', {'form': form})
 
 @login_required
-def delete_photo(request, pk):
-    photo = get_object_or_404(Photo, pk=pk)
-    if photo.owner == request.user:
+def photo_delete(request, pk):
+    photo = get_object_or_404(Photo, pk=pk, user=request.user)
+    if request.method == 'POST':
         photo.delete()
-    return redirect('photo_list')
+        return redirect('photo_list')
+    return redirect('photo_detail', pk=pk)
 
 def register(request):
     if request.method == "POST":

@@ -12,16 +12,16 @@
     {% for photo in photos %}
         <div class="col-md-4 mb-4">
             <div class="card shadow-sm">
-                <img src="{{ photo.image.url }}" class="card-img-top">
+                <a href="{% url 'photo_detail' photo.pk %}">
+                    <img src="{{ photo.image.url }}" 
+                        class="card-img-top img-fluid"
+                        style="height: 250px; object-fit: cover;">
+                </a>
                 <div class="card-body">
                     <h5 class="card-title">{{ photo.title }}</h5>
                     <p class="card-text text-muted small">
                         {{ photo.created_at|date:"Y-m-d H:i" }}
                     </p>
-                    {% if user == photo.user %}
-                        <a href="{% url 'photo_delete' photo.id %}" 
-                           class="btn btn-danger btn-sm">Delete</a>
-                    {% endif %}
                 </div>
             </div>
         </div>
