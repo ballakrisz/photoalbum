@@ -1,20 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="card shadow-lg">
-    <img src="{{ photo.image.url }}" class="card-img-top">
-    <div class="card-body">
-        <h3>{{ photo.title }}</h3>
+<div class="text-center">
+    <h2>{{ photo.name }}</h2>
 
-        {% if user == photo.user %}
-        <form method="post" action="{% url 'photo_delete' photo.pk %}">
-            {% csrf_token %}
-            <button class="btn btn-danger mt-3">Delete</button>
-        </form>
-        {% endif %}
+    <img src="{{ photo.image.url }}" class="img-fluid rounded shadow my-3">
 
-        <a href="{% url 'photo_list' %}" class="btn btn-secondary mt-3">Back</a>
-    </div>
+    <p class="text-muted">
+        Uploaded: {{ photo.uploaded_at|date:"Y-m-d H:i" }}
+    </p>
+
+    <p class="text-muted">
+        By: {{ photo.owner.username }}
+    </p>
+
+    <a href="{% url 'photo_list' %}" class="btn btn-secondary mt-3">
+        Back to Gallery
+    </a>
 </div>
 
 {% endblock %}
