@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Photo
 from django.contrib.auth.decorators import login_required
 from .forms import PhotoForm
+from django.contrib.auth.forms import UserCreationForm
 
 def photo_list(request):
     sort = request.GET.get('sort', 'name')
@@ -31,3 +32,14 @@ def delete_photo(request, pk):
     if photo.owner == request.user:
         photo.delete()
     return redirect('photo_list')
+
+def register(request):
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("login")
+    else:
+        form = UserCreationForm()
+
+    return render(request, "registration/register.html", {"form": form})
