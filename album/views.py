@@ -5,9 +5,21 @@ from .forms import PhotoForm
 from django.contrib.auth.forms import UserCreationForm
 
 def photo_list(request):
-    sort = request.GET.get('sort', 'name')
-    photos = Photo.objects.all().order_by(sort)
-    return render(request, 'album/photo_list.html', {'photos': photos})
+    sort = request.GET.get("sort")
+
+    photos = Photo.objects.all()
+
+    if sort == "name":
+        photos = photos.order_by("name")
+    elif sort == "date":
+        photos = photos.order_by("-uploaded_at")
+    else:
+        photos = photos.order_by("-uploaded_at")
+
+    return render(request, "album/photo_list.html", {
+        "photos": photos,
+        "current_sort": sort
+    })
 
 def photo_detail(request, pk):
     photo = get_object_or_404(Photo, pk=pk)
@@ -15,24 +27,29 @@ def photo_detail(request, pk):
 
 @login_required
 def photo_upload(request):
-    if request.method == 'POST':
-        form = PhotoForm(request.POST, request.FILES)
-        if form.is_valid():
-            photo = form.save(commit=False)
-            photo.owner = request.user
-            photo.save()
-            return redirect('photo_list')
-    else:
-        form = PhotoForm()
-    return render(request, 'album/upload.html', {'form': form})
+    if request.method == "POST":
+        name = request.POST.get("name")
+        image = request.FILES.get("image")
+
+        Photo.objects.create(
+            name=name,
+            image=image,
+            owner=request.user
+        )
+
+        return redirect("photo_list")
+
+    return render(request, "album/upload_photo.html")
 
 @login_required
 def photo_delete(request, pk):
-    photo = get_object_or_404(Photo, pk=pk, user=request.user)
-    if request.method == 'POST':
-        photo.delete()
-        return redirect('photo_list')
-    return redirect('photo_detail', pk=pk)
+    photo = get_object_or_404(Photo, pk=pk)
+
+    if photo.owner != request.user:
+        return HttpResponseForbidden("You are not allowed to delete this photo.")
+
+    photo.delete()
+    return redirect("photo_list")
 
 def register(request):
     if request.method == "POST":
