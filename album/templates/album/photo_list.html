@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Photo Album</title>
+</head>
+<body>
+    <h1>Photo Album</h1>
+
+    {% if user.is_authenticated %}
+        <p>
+            Logged in as {{ user.username }} |
+            <a href="/accounts/logout/">Logout</a> |
+            <a href="/upload/">Upload new photo</a>
+        </p>
+    {% else %}
+        <p>
+            <a href="/accounts/login/">Login</a>
+        </p>
+    {% endif %}
+
+    <p>
+        Sort:
+        <a href="/?sort=name">By name</a> |
+        <a href="/?sort=uploaded_at">By date</a>
+    </p>
+
+    <ul>
+        {% for photo in photos %}
+            <li>
+                <a href="/photo/{{ photo.id }}/">
+                    {{ photo.name }} ({{ photo.uploaded_at }})
+                </a>
+                {% if user == photo.owner %}
+                    | <a href="/delete/{{ photo.id }}/">Delete</a>
+                {% endif %}
+            </li>
+        {% empty %}
+            <li>No photos yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

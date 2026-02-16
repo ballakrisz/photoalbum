@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ photo.name }}</title>
+</head>
+<body>
+    <h1>{{ photo.name }}</h1>
+    <p>Uploaded at: {{ photo.uploaded_at }}</p>
+
+    <img src="{{ photo.image.url }}" style="max-width: 600px;" />
+
+    <p><a href="/">Back to list</a></p>
+</body>
+</html>
