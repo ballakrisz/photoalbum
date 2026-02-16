@@ -13,14 +13,34 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
         <a class="navbar-brand" href="/">📸 PhotoAlbum</a>
-        <div>
+
+        <div class="d-flex align-items-center">
+
             {% if user.is_authenticated %}
-                <span class="text-white me-3">Hello, {{ user.username }}</span>
-                <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">Logout</a>
+                <span class="text-white me-3">
+                    Hello, {{ user.username }}
+                </span>
+
+                <!-- Django 5 logout must be POST -->
+                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-light btn-sm">
+                        Logout
+                    </button>
+                </form>
+
             {% else %}
-                <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm me-2">Login</a>
-                <a href="{% url 'register' %}" class="btn btn-warning btn-sm">Register</a>
+                <a href="{% url 'login' %}" 
+                   class="btn btn-outline-light btn-sm me-2">
+                    Login
+                </a>
+
+                <a href="{% url 'register' %}" 
+                   class="btn btn-warning btn-sm">
+                    Register
+                </a>
             {% endif %}
+
         </div>
     </div>
 </nav>
