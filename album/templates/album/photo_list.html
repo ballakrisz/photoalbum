@@ -45,10 +45,10 @@
                         By: {{ photo.owner.username }}
                     </p>
 
-                    {% if user.is_authenticated and user == photo.owner %}
+                    {% if user.is_authenticated and (user == photo.owner or user.is_staff) %}
                         <a href="{% url 'photo_delete' photo.pk %}"
-                           class="btn btn-danger btn-sm">
-                           Delete
+                        class="btn btn-danger btn-sm">
+                            Delete
                         </a>
                     {% endif %}
                 </div>

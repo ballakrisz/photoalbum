@@ -45,7 +45,7 @@ def photo_upload(request):
 def photo_delete(request, pk):
     photo = get_object_or_404(Photo, pk=pk)
 
-    if photo.owner != request.user:
+    if not (request.user == photo.owner or request.user.is_staff):
         return HttpResponseForbidden("You are not allowed to delete this photo.")
 
     photo.delete()
