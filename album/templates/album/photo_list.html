@@ -29,7 +29,7 @@
     {% for photo in photos %}
         <div class="col-md-4 mb-4">
             <div class="card shadow-sm h-100">
-                <a href="{% url 'photo_detail' photo.pk %}"></a>
+                <a href="{% url 'photo_detail' photo.pk %}">
                     <img src="{{ photo.image.url }}"
                         class="card-img-top img-fluid"
                         style="height: 250px; object-fit: cover;">
