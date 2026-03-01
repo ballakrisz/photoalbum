@@ -131,4 +131,4 @@ The application staiesfies the minimal functional requirements:
 Additional functionalities:
 - The galery is displayed as a tile of images, where instead of the names of the entries, the user can see a preview of the image associated with that entry
 - Photos can be only deleted by the user who uploaded them
-- An admin user was created (me), who can delete any images
+- An admin user was created (me), who can delete any images.
