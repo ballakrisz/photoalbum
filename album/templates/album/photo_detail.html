@@ -1,31 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="text-center">
-    <h2>{{ photo.name }}</h2>
+<div class="container mt-4">
+    <div class="text-center">
 
-    <img src="{{ photo.image.url }}" class="img-fluid rounded shadow my-3">
+        <h2 class="mb-3">{{ photo.name }}</h2>
 
-    <p class="text-muted">
-        Uploaded: {{ photo.uploaded_at|date:"Y-m-d H:i" }}
-    </p>
+        <img src="{{ photo.image.url }}"
+             class="img-fluid rounded shadow mb-3"
+             style="max-height: 600px;">
 
-    <p class="text-muted">
-        By: {{ photo.owner.username }}
-    </p>
+        <p class="text-muted mb-1">
+            Uploaded: {{ photo.uploaded_at|date:"Y-m-d H:i" }}
+        </p>
 
-    {% if user.is_authenticated %}
-        {% if user == photo.owner or user.is_staff %}
-            <a href="{% url 'photo_delete' photo.pk %}"
-            class="btn btn-danger">
-            Delete
+        <p class="text-muted mb-3">
+            By: {{ photo.owner.username }}
+        </p>
+
+        <div class="d-flex justify-content-center gap-2 mt-3">
+
+            {% if user == photo.owner or user.is_staff %}
+                <a href="{% url 'photo_delete' photo.pk %}"
+                   class="btn btn-danger">
+                   Delete
+                </a>
+            {% endif %}
+
+            <a href="{% url 'photo_list' %}"
+               class="btn btn-secondary">
+               Back to Gallery
             </a>
-        {% endif %}
-    {% endif %}
 
-    <a href="{% url 'photo_list' %}" class="btn btn-secondary mt-3">
-        Back to Gallery
-    </a>
+        </div>
+
+    </div>
 </div>
 
 {% endblock %}
