@@ -34,6 +34,11 @@ def photo_upload(request):
         name = request.POST.get("name")
         image = request.FILES.get("image")
 
+        # validation
+        if len(name) > 40:
+            messages.error(request, "Photo name cannot exceed 40 characters.")
+            return render(request, "album/photo_upload.html")
+
         Photo.objects.create(
             name=name,
             image=image,
