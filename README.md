@@ -6,6 +6,9 @@ The application is available at:
 https://photoalbum-git-skicpausz-dev.apps.rm1.0a51.p1.openshiftapps.com/
 
 (If you cannot reach the application, please send me a message on Teams. The Developer Sandbox sometimes automatically stops pods that have not been used for a while. Just message me on Teams and i'll restart the pods, so you can try the application yourself.)
+
+![App Overview](docs/app_overview.png)
+
 ## Overview
 
 PhotoAlbum is a Django web application deployed on OpenShift.
