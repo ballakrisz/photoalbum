@@ -6,14 +6,80 @@
         <div class="card shadow">
             <div class="card-body">
                 <h4 class="mb-3">Register</h4>
+
                 <form method="post">
                     {% csrf_token %}
-                    {{ form.as_p }}
-                    <button class="btn btn-success w-100">Register</button>
+
+                    <!-- Username -->
+                    <div class="mb-3">
+                        {{ form.username.label_tag }}
+                        {{ form.username }}
+                    </div>
+
+                    <!-- Email -->
+                    <div class="mb-3">
+                        {{ form.email.label_tag }}
+                        {{ form.email }}
+                    </div>
+
+                    <!-- Password -->
+                    <div class="mb-3">
+                        {{ form.password1.label_tag }}
+                        {{ form.password1 }}
+                        <small id="password-feedback" class="form-text"></small>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="mb-3">
+                        {{ form.password2.label_tag }}
+                        {{ form.password2 }}
+                    </div>
+
+                    <button id="register-btn" class="btn btn-success w-100">
+                        Register
+                    </button>
                 </form>
+
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const passwordInput = document.getElementById("id_password1");
+    const feedback = document.getElementById("password-feedback");
+    const registerBtn = document.getElementById("register-btn");
+
+    passwordInput.addEventListener("input", function() {
+        const password = passwordInput.value;
+
+        const hasMinLength = password.length >= 8;
+        const hasUppercase = /[A-Z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+
+        if (!hasMinLength) {
+            feedback.textContent = "Password must be at least 8 characters.";
+            feedback.style.color = "red";
+            registerBtn.disabled = true;
+        } 
+        else if (!hasUppercase) {
+            feedback.textContent = "Password must contain an uppercase letter.";
+            feedback.style.color = "red";
+            registerBtn.disabled = true;
+        } 
+        else if (!hasNumber) {
+            feedback.textContent = "Password must contain a number.";
+            feedback.style.color = "red";
+            registerBtn.disabled = true;
+        } 
+        else {
+            feedback.textContent = "Password looks good!";
+            feedback.style.color = "green";
+            registerBtn.disabled = false;
+        }
+    });
+});
+</script>
 
 {% endblock %}
