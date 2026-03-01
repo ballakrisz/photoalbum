@@ -132,3 +132,49 @@ Additional functionalities:
 - The galery is displayed as a tile of images, where instead of the names of the entries, the user can see a preview of the image associated with that entry
 - Photos can be only deleted by the user who uploaded them
 - An admin user was created (me), who can delete any images
+
+# Auto-build based on git
+
+This is mainly just for me, so if I have to do it again, i know how to.
+
+According to the Red Hat tutorial: https://redhat-scholars.github.io/openshift-starter-guides/rhs-openshift-starter-guides/4.9/nationalparks-java-codechanges-github.html
+
+1. Copy the webhook for github (with secret!)
+![OpenShift hook](docs/OpenShift_webhook.png)
+
+2. Paste it into github
+![Pod Architecure](docs/github_webhook.png)
+
+
+### Unfortunately it did not work.
+I recieved the following response on github:
+```bash
+{"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"buildconfigs.build.openshift.io \"photoalbum-git\" is forbidden: User \"system:anonymous\" cannot create resource \"buildconfigs/webhooks\" in API group \"build.openshift.io\" in the namespace \"skicpausz-dev\"","reason":"Forbidden","details":{"name":"photoalbum-git","group":"build.openshift.io","kind":"buildconfigs"},"code":403}
+```
+According to a thread i found online (https://access.redhat.com/solutions/7105930):
+
+"From OCP version 4.16 onward, all webhooks for BuildConfigs must either have an OpenShift authentication token in their HTTP headers, OR an administrator must grant the system:webhook role to the system:unauthenticated group in the namespace where the BuildConfig resides.
+"
+
+I had to add the webhook role to the unauthenticated group via the following command:
+```bash
+oc policy add-role-to-group system:webhook system:unauthenticated -n skicpausz-dev
+```
+
+### After this, the GitHub webhook response was 200 OK, but pushing still didn't initiate a build.
+
+OpenShift defaults to the "master" branch of git, while I was using the "main" branch. To force OpenShift to use the "main" branch, i had to add the following code to my BuildConfig
+```bash
+source:
+  type: Git
+  git:
+    uri: 'https://github.com/ballakrisz/photoalbum.git'
+    ref: main
+  contextDir: /
+```
+Also, i had to add this to the yaml config of my photoalbum project, to make sure the Deployment is watching the ImageStream and that every new build forces a new rollout of my pod (Though i tried like 10 things all at the same time, so this might not be necessary. I think the build automatically starts a new pod when finished by default):
+```bash
+metadata:
+  annotations:
+    image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"photoalbum-git:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"photoalbum-git\")].image"}]'
+```
