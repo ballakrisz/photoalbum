@@ -79,7 +79,8 @@ def photo_delete(request, pk):
     if not (request.user == photo.owner or request.user.is_staff):
         return HttpResponseForbidden("You are not allowed to delete this photo.")
 
-    photo.delete()
+    photo.image.delete(save=False)  # delete photo from S3
+    photo.delete()                  # delet DB row
     return redirect("photo_list")
 
 def register(request):
