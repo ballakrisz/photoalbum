@@ -1,24 +1,34 @@
 # PhotoAlbum – OpenShift Deployment
 
-Created by: Balla Krisztián (RZWVC0)
+Created by: **Balla Krisztián (RZWVC0)**
 
-The application is available at:
+The application is available at:  
 https://photoalbum-git-skicpausz-dev.apps.rm1.0a51.p1.openshiftapps.com/
 
-(If you cannot reach the application, please send me a message on Teams. The Developer Sandbox sometimes automatically stops pods that have not been used for a while. Just message me on Teams and i'll restart the pods, so you can try the application yourself.)
+*(If the application is temporarily unavailable, the Developer Sandbox may stop idle pods. Please contact me on Teams and I will restart them.)*
 
 ![App Overview](docs/app_overview.png)
 
-## Overview
+---
+
+# Overview
 
 PhotoAlbum is a Django web application deployed on OpenShift.
 
 Users can:
+
 - Register and log in
 - Upload photos
 - View uploaded photos
+- Delete their own photos
 
-The application uses PostgreSQL for structured data and Persistent Volumes to ensure data survives pod restarts.
+The application uses:
+
+- **PostgreSQL** for relational data
+- **AWS S3 object storage** for uploaded images
+- **OpenShift Deployments and Services** for orchestration
+
+The system is designed to be **stateless and scalable**.
 
 ---
 
@@ -28,96 +38,90 @@ The system consists of:
 
 - 1 Django application pod (`photoalbum-git`)
 - 1 PostgreSQL pod (`postgres`)
-- 2 Persistent Volume Claims (PVCs)
+- 1 Persistent Volume Claim (PVC) for PostgreSQL
+- AWS S3 bucket for image storage
 - 1 Service + 1 Route for external access
 
-The application pod is stateless.
-All important data is stored in persistent volumes.
+The Django application pod is completely **stateless**.
 
-![Pod Architecure](docs/pod_arch.png)
-![Storage Architecure](docs/storage_arch.png)
+All persistent data is stored externally:
+
+- Relational data → PostgreSQL PVC  
+- Image files → AWS S3  
+
+![Pod Architecture](docs/pod_arch.png)
+![Storage Architecure](docs/postgresql_pvc.png)
+
 ---
 
 # Components
 
-## 1. Django Application (photoalbum-git)
+## 1. Django Application (`photoalbum-git`)
 
 - Type: Deployment
 - Port: 8080
-- Replicas: 1
+- Replicas: 1 (scalable)
+- Stateless
 
 ### Responsibilities
+
 - Handles HTTP requests
-- Authentication
+- User authentication
 - Image upload
-- Reads/writes data to PostgreSQL
+- Stores metadata in PostgreSQL
+- Uploads image files directly to AWS S3
 
-### Persistent Storage
-Mounted PVC: media-files-pvc → /opt/app-root/src/media
+### Storage
 
-This stores uploaded image files.
+No Persistent Volume is mounted.
 
-If the pod restarts, images remain because they are stored in the PVC.
+Uploaded images are stored in AWS S3: `photoalbum-skicpausz-media`
 
 ---
 
-## 2. PostgreSQL Database (postgres)
+## 2. PostgreSQL Database (`postgres`)
 
 - Type: Deployment
 - Port: 5432
 - Replicas: 1
+- Stateful
 
 ### Responsibilities
+
 - Stores users
 - Stores image metadata
 - Stores authentication data
 - Stores Django migrations
 
 ### Persistent Storage
-Mounted PVC: postgres-data-pvc → /var/lib/pgsql/data
 
+Mounted PVC: `postgres-data-pvc → /var/lib/pgsql/data`
 
-This contains the full PostgreSQL data directory.
-
-If the pod restarts, the database remains intact.
+If the PostgreSQL pod restarts, the database remains intact.
 
 ---
 
 # Storage Design
 
-Two separate PVCs are used:
+## postgres-data-pvc
 
-### postgres-data-pvc
 Used only by PostgreSQL.
 
 Contains:
+
 - Database tables
 - WAL logs
 - All relational data
 
-### media-files-pvc
+## AWS S3 Object Storage
+
 Used only by Django.
 
 Contains:
+
 - Uploaded image files
 
 ---
-
-# Persistence Verification (test for myself)
-
-The system was tested by:
-
-- Deleting the PostgreSQL pod
-- Deleting the Django pod
-
-After recreation:
-- Database data remained (user info persisted)
-- Uploaded images remained (media persisted)
-
-This confirmed correct persistent volume configuration.
-
----
-
 # Functionalities
 
 The application staiesfies the minimal functional requirements:
@@ -132,6 +136,51 @@ Additional functionalities:
 - The galery is displayed as a tile of images, where instead of the names of the entries, the user can see a preview of the image associated with that entry
 - Photos can be only deleted by the user who uploaded them
 - An admin user was created (me), who can delete any images
+
+---
+# Why S3 Instead of PVC for Media Files?
+
+Initially, uploaded images were stored on a shared Persistent Volume (PVC), and under normal circumstances this setup worked as expected. However, during redeployments, an issue occurred intermittently — roughly 1 out of 5 times, the new pod failed to start while the old pod continued running.
+
+After inspecting the **Events** tab of the newly created pod (which remained stuck in the *Creating* state), I discovered that the error was caused by the media PVC still being mounted to the old pod. The underlying problem was that the volume supported only **ReadWriteOnce (RWO)** access mode, meaning it could be attached to only one pod at a time.
+
+Because the deployment strategy was set to **RollingUpdate**, Kubernetes attempted to start the new pod before terminating the old one. However, the new pod could not mount the PVC since it was still attached to the running old pod. At the same time, the old pod was not terminated because the RollingUpdate strategy ensures availability by keeping it alive until the new pod becomes ready. This resulted in a deadlock situation:
+
+- The new pod could not start without the PVC.
+- The PVC could not detach while the old pod was still running.
+- The old pod would not terminate because the new pod never became ready.
+
+The only way to resolve the situation manually was to delete the old pod, which would release the volume and allow the new pod to mount it successfully.
+
+A simple solution would've been to switch the deployment strategy to **Recreate**, which termintes all running pods, before starting the new ones. But, as my future tasks include making my application **scalable**, this **RWO** PVC would prevent me from running multiple pods of my application. Thus, I decided to switch to an AWS S3 object storage as my media storage. 
+## Why S3 Solves This Problem
+
+Switching to S3 (object storage) eliminates this limitation entirely. Unlike PVCs with RWO access mode:
+
+- S3 is not mounted as a block device.
+- Multiple pods can access the same bucket simultaneously.
+- There is no attachment/detachment lifecycle tied to individual pods.
+- Rolling updates work seamlessly without storage-related conflicts.
+
+By moving media files to S3, the deployment becomes more reliable, scalable, and resilient to rolling updates. It also improves decoupling between compute (pods) and storage, aligning better with cloud-native design principles.
+
+---
+
+# Persistence Verification (test for myself)
+
+The system was tested by:
+
+- Deleting the PostgreSQL pod
+- Deleting the Django pod
+
+After recreation:
+- Database data remained (user info persisted thanks to the PVC)
+- Uploaded images remained (media persisted thanks to the S3 object storage)
+
+This confirmed correct persistent volume configuration.
+
+---
+
 
 # Auto-build based on git
 
