@@ -3,6 +3,7 @@ from .models import Photo
 from django.contrib.auth.decorators import login_required
 from .forms import PhotoForm
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib import messages
 import os
 
 def photo_list(request):
