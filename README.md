@@ -111,8 +111,8 @@ The system was tested by:
 - Deleting the Django pod
 
 After recreation:
-- Database data remained (user infor persisted)
-- Uploaded images remained (medi persisted)
+- Database data remained (user info persisted)
+- Uploaded images remained (media persisted)
 
 This confirmed correct persistent volume configuration.
 
