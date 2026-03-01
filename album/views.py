@@ -3,6 +3,7 @@ from .models import Photo
 from django.contrib.auth.decorators import login_required
 from .forms import PhotoForm
 from django.contrib.auth.forms import UserCreationForm
+import os
 
 def photo_list(request):
     sort = request.GET.get("sort")
@@ -34,9 +35,30 @@ def photo_upload(request):
         name = request.POST.get("name")
         image = request.FILES.get("image")
 
-        # validation
-        if len(name) > 40:
-            messages.error(request, "Photo name cannot exceed 40 characters.")
+        # Name validation
+        if not name or len(name) > 40:
+            messages.error(request, "Photo name must be 40 characters or less.")
+            return render(request, "album/photo_upload.html")
+
+        # File exists
+        if not image:
+            messages.error(request, "Please select an image.")
+            return render(request, "album/photo_upload.html")
+
+        # Size check (2MB)
+        if image.size > 2 * 1024 * 1024:
+            messages.error(request, "Image size must be less than 2MB.")
+            return render(request, "album/photo_upload.html")
+
+        # MIME type check
+        if not image.content_type.startswith("image/"):
+            messages.error(request, "Only image files are allowed.")
+            return render(request, "album/photo_upload.html")
+
+        # Extension check
+        ext = os.path.splitext(image.name)[1].lower()
+        if ext not in [".jpg", ".jpeg", ".png", ".gif"]:
+            messages.error(request, "Only JPG, PNG or GIF images are allowed.")
             return render(request, "album/photo_upload.html")
 
         Photo.objects.create(
