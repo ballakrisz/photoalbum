@@ -50,7 +50,6 @@ All persistent data is stored externally:
 - Image files → AWS S3  
 
 ![Pod Architecture](docs/pod_arch.png)
-![Storage Architecure](docs/postgresql_pvc.png)
 
 ---
 
@@ -113,14 +112,21 @@ Contains:
 - WAL logs
 - All relational data
 
+![Postgres PVC](docs/postgresql_pvc.png)
+
 ## AWS S3 Object Storage
 
-Used only by Django.
+Used only by the Django application.
 
 Contains:
 
 - Uploaded image files
 
+![S3 storage](docs/S3_bucket.png)
+
+Accessed by OpenShift through the `photoalbum-django` **IAM user**.
+
+![IAM user](docs/iam_user.png)
 ---
 # Functionalities
 
