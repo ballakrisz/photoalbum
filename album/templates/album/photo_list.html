@@ -166,13 +166,14 @@ document.addEventListener("click", async function(e) {
         const res = await fetch(url, { method: "GET" });
         if (!res.ok) return;
 
-        // ✅ remove immediately (so user sees instant feedback)
+        // remove immediately
         if (card) {
             card.remove();
         }
 
-        // ✅ then force reload (correct state guaranteed)
-        window.location.reload();
+        //  FORCE FRESH RELOAD (bypass cache)
+        const current = window.location.pathname + window.location.search;
+        window.location.href = current + (current.includes("?") ? "&" : "?") + "_=" + Date.now();
 
     } catch (err) {
         console.error("Delete failed:", err);
