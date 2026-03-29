@@ -101,9 +101,6 @@ def delete_locust_photos(request):
     # Delete photo rows
     photos.delete()
 
-    # Delete users
-    locust_users.delete()
-
     return redirect("photo_list")
 
 def register(request):
