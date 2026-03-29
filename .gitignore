@@ -5,3 +5,4 @@ media/
 staticfiles/
 *.pyc
 .env
+tmp.py
