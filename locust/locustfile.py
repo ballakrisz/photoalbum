@@ -41,41 +41,60 @@ class PhotoAlbumUser(HttpUser):
         self.username = f"locust_{self.random_string()}"
         self.password = "StressTest0"
         self.my_photo_ids = []
+        self.logged_in = False
 
-        # 🔹 REGISTER
-        response = self.client.get("/register/")
-        csrf_token = self.get_csrf_token(response)
+        for _ in range(3):  # try register + login 3 times
+            try:
+                #  REGISTER
+                response = self.client.get("/register/")
+                csrf_token = self.get_csrf_token(response)
 
-        self.client.post(
-            "/register/",
-            data={
-                "username": self.username,
-                "password1": self.password,
-                "password2": self.password,
-                "csrfmiddlewaretoken": csrf_token,
-                "next": "/",
-            },
-            headers={"Referer": self.host + "/register/"}
-        )
+                self.client.post(
+                    "/register/",
+                    data={
+                        "username": self.username,
+                        "password1": self.password,
+                        "password2": self.password,
+                        "csrfmiddlewaretoken": csrf_token,
+                        "next": "/",
+                    },
+                    headers={"Referer": self.host + "/register/"}
+                )
 
-        # 🔹 LOGIN
-        response = self.client.get("/accounts/login/")
-        csrf_token = self.get_csrf_token(response)
+                # LOGIN
+                response = self.client.get("/accounts/login/")
+                csrf_token = self.get_csrf_token(response)
 
-        self.client.post(
-            "/accounts/login/",
-            data={
-                "username": self.username,
-                "password": self.password,
-                "csrfmiddlewaretoken": csrf_token,
-                "next": "/",
-            },
-            headers={"Referer": self.host + "/accounts/login/"}
-        )
+                self.client.post(
+                    "/accounts/login/",
+                    data={
+                        "username": self.username,
+                        "password": self.password,
+                        "csrfmiddlewaretoken": csrf_token,
+                        "next": "/",
+                    },
+                    headers={"Referer": self.host + "/accounts/login/"}
+                )
+
+                # CHECK LOGIN (if register was succesfull)
+                check = self.client.get("/")
+
+                if f"Hello, {self.username}" in check.text:
+                    self.logged_in = True
+                    print("LOGIN SUCCESS:", self.username)
+                    break
+
+            except Exception:
+                pass
+
+            self.wait()
 
     # VIEWING POHOTO LIST
-    @task(2)
+    @task(3)
     def index(self):
+        if not self.logged_in:
+            return
+
         response = self.client.get("/")
         print(response.text)
 
@@ -91,11 +110,18 @@ class PhotoAlbumUser(HttpUser):
     # SORTING
     @task(1)
     def sort(self):
+        if not self.logged_in:
+            return
+
         self.client.get("/?sort=name")
         self.client.get("/?sort=date")
 
-    @task(2)
+    # PHOTO UPLOAD
+    @task(1)
     def upload(self):
+        if not self.logged_in:
+            return
+
         response = self.client.get("/upload/")
         csrf_token = self.get_csrf_token(response)
 
@@ -115,7 +141,7 @@ class PhotoAlbumUser(HttpUser):
         img.save(buf, format="JPEG")
         image_bytes = buf.getvalue()
 
-        # STEP 4: Upload
+        
         response = self.client.post(
             "/upload/",
             data={
@@ -141,6 +167,9 @@ class PhotoAlbumUser(HttpUser):
     #  VIEW PHOTO DETAIL 
     @task(1)
     def view_detail(self):
+        if not self.logged_in:
+            return
+
         if not self.my_photo_ids:
             return
 
@@ -150,6 +179,9 @@ class PhotoAlbumUser(HttpUser):
     # Delete photo
     @task(1)
     def delete(self):
+        if not self.logged_in:
+            return
+
         if not self.my_photo_ids:
             return
 
@@ -161,7 +193,10 @@ class PhotoAlbumUser(HttpUser):
     #  LOGOUT + LOGIN again (session churn)
     @task(1)
     def logout_login(self):
-        # 🔹 STEP 1: get page to extract CSRF
+        if not self.logged_in:
+            return
+
+        # get page to extract CSRF
         response = self.client.get("/")
         csrf_token = self.get_csrf_token(response)
 
@@ -170,7 +205,7 @@ class PhotoAlbumUser(HttpUser):
             response = self.client.get("/accounts/login/")
             csrf_token = self.get_csrf_token(response)
 
-        # 🔹 POST logout
+        # POST logout
         self.client.post(
             "/accounts/logout/",
             data={
@@ -179,7 +214,9 @@ class PhotoAlbumUser(HttpUser):
             },
             headers={"Referer": self.host + "/"}
         )
+        self.logged_in = False
 
+        # log back in
         response = self.client.get("/accounts/login/")
         csrf_token = self.get_csrf_token(response)
 
@@ -193,3 +230,6 @@ class PhotoAlbumUser(HttpUser):
             },
             headers={"Referer": self.host + "/accounts/login/"}
         )
+        check = self.client.get("/")
+        if f"Hello, {self.username}" in check.text:
+            self.logged_in = True

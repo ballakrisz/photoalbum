@@ -233,3 +233,55 @@ metadata:
   annotations:
     image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"photoalbum-git:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"photoalbum-git\")].image"}]'
 ```
+
+---
+
+# Auto-scaling Configuration
+To ensure the application can handle increasing load, **Horizontal Pod Autoscaling (HPA)** was configured in OpenShift.
+
+The goal was to:
+- Automatically **scale up** when CPU usage increases
+- Automatically **scale down** when load decreases
+
+
+## HPA Configuration
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: photoalbum-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: photoalbum-git
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      selectPolicy: Max
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 10
+        - type: Pods
+          value: 2
+          periodSeconds: 10
+    scaleDown:
+      stabilizationWindowSeconds: 10
+      selectPolicy: Max
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 10
+```
+S
