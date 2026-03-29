@@ -63,7 +63,11 @@ def photo_list(request):
 #  Detail
 def photo_detail(request, pk):
     photo = get_object_or_404(Photo, pk=pk)
-    return render(request, "album/photo_detail.html", {"photo": photo})
+
+    return render(request, "album/photo_detail.html", {
+        "photo": photo,
+        "next": request.GET.get("next") 
+    })
 
 
 # Upload (preserve sorting/page)

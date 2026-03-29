@@ -8,7 +8,8 @@
 
         <img src="{{ photo.image.url }}"
              class="img-fluid rounded shadow mb-3"
-             style="max-height: 600px;">
+             style="max-height: 600px;"
+             loading="lazy">
 
         <p class="text-muted mb-1">
             Uploaded: {{ photo.uploaded_at|date:"Y-m-d H:i" }}
@@ -21,13 +22,13 @@
         <div class="d-flex justify-content-center gap-2 mt-3">
 
             {% if user == photo.owner or user.is_staff %}
-                <a href="{% url 'photo_delete' photo.pk %}"
+                <a href="{% url 'photo_delete' photo.pk %}?next={{ next|urlencode }}"
                    class="btn btn-danger">
                    Delete
                 </a>
             {% endif %}
 
-            <a href="{% url 'photo_list' %}"
+            <a href="{{ next|default:'/' }}"
                class="btn btn-secondary">
                Back to Gallery
             </a>
