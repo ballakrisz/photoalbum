@@ -41,17 +41,90 @@
 </div>
 
 <script>
-document.getElementById("delete-detail")?.addEventListener("click", function(e) {
-    e.preventDefault();
+// 🔥 ONE global handler (works for existing + future elements)
+document.addEventListener("click", function(e) {
 
-    const url = this.dataset.url;
-    const next = new URL(url, window.location.origin).searchParams.get("next") || "/";
+    // =========================
+    // GALLERY DELETE BUTTONS
+    // =========================
+    if (e.target.classList.contains("delete-btn")) {
+        e.preventDefault();
 
-    fetch(url, { method: "GET" }).then(res => {
-        if (res.ok) {
-            window.location.href = next;
-        }
-    });
+        const btn = e.target;
+        const url = btn.dataset.url;
+        const card = btn.closest(".col-md-4");
+
+        const params = new URLSearchParams(window.location.search);
+        let page = parseInt(params.get("page") || "1");
+        const sort = params.get("sort") || "";
+
+        fetch(url, { method: "GET" }).then(res => {
+            if (res.ok) {
+
+                // remove card
+                card.remove();
+
+                // load replacement
+                fetch(`/next-photo/?page=${page + 1}&sort=${sort}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.photo) {
+                            const row = document.querySelector(".row");
+
+                            const html = `
+                                <div class="col-md-4 mb-4">
+                                    <div class="card shadow-sm h-100">
+                                        <a href="/photo/${data.photo.id}/?next=${encodeURIComponent(window.location.pathname + window.location.search)}">
+                                            <img src="${data.photo.image}"
+                                                 class="card-img-top img-fluid"
+                                                 style="height: 250px; object-fit: cover;">
+                                        </a>
+
+                                        <div class="card-body">
+                                            <h5 class="card-title">${data.photo.name}</h5>
+
+                                            <p class="text-muted small">
+                                                Uploaded: ${data.photo.uploaded}
+                                            </p>
+
+                                            <p class="text-muted small">
+                                                By: ${data.photo.owner}
+                                            </p>
+
+                                            <a href="#"
+                                               class="btn btn-danger btn-sm delete-btn"
+                                               data-url="/photo/${data.photo.id}/delete/?next=${encodeURIComponent(window.location.pathname + window.location.search)}">
+                                                Delete
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+
+                            row.insertAdjacentHTML("beforeend", html);
+                        }
+                    });
+            }
+        });
+    }
+
+    // =========================
+    // DETAIL DELETE BUTTON
+    // =========================
+    if (e.target.id === "delete-detail") {
+        e.preventDefault();
+
+        const url = e.target.dataset.url;
+        const next = new URL(url, window.location.origin).searchParams.get("next") || "/";
+
+        fetch(url, { method: "GET" }).then(res => {
+            if (res.ok) {
+                // 🔥 FORCE fresh reload (bypass cache ONLY here)
+                window.location.href = next + (next.includes("?") ? "&" : "?") + "_=" + Date.now();
+            }
+        });
+    }
+
 });
 </script>
 {% endblock %}
