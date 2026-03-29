@@ -508,7 +508,7 @@ Only a small number of failures occurred, primarily due to users attempting to a
 
 ![Locust errors](docs/locust_errors.png)
 
-After some time, the system correctly scaled back down to a single pod, demonstrating that both scaling up and scaling down function as expected:
+After the stress test was over, the system correctly scaled back down to a single pod, demonstrating that both scaling up and scaling down function as expected:
 
 ![pods after](docs/pods_after_load_gone.png)
 
