@@ -95,20 +95,18 @@ def photo_delete(request, pk):
 
 @staff_member_required
 def delete_locust_photos(request):
+    #  Get all locust users
     locust_users = User.objects.filter(username__startswith="locust_")
+
+    # Get all their photos
     photos = Photo.objects.filter(owner__in=locust_users)
 
-    # Collect all file paths
-    keys = [photo.image.name for photo in photos if photo.image]
+    # Delete images from S3 FIRST
+    for photo in photos.iterator():
+        photo.image.delete(save=False)
 
-    # Bulk delete from storage (S3)
-    if keys:
-        Photo._meta.get_field("image").storage.delete_many(keys)
-
-    # Delete DB rows 
+    # Delete photo rows
     photos.delete()
-
-    return redirect("photo_list")
 
     return redirect("photo_list")
 
