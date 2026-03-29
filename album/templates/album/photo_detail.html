@@ -22,8 +22,10 @@
         <div class="d-flex justify-content-center gap-2 mt-3">
 
             {% if user == photo.owner or user.is_staff %}
-                <a href="{% url 'photo_delete' photo.pk %}?next={{ next|urlencode }}"
-                class="btn btn-danger">
+                <a href="#"
+                class="btn btn-danger"
+                id="delete-detail"
+                data-url="{% url 'photo_delete' photo.pk %}?next={{ next|urlencode }}">
                     Delete
                 </a>
             {% endif %}
@@ -38,4 +40,18 @@
     </div>
 </div>
 
+<script>
+document.getElementById("delete-detail")?.addEventListener("click", function(e) {
+    e.preventDefault();
+
+    const url = this.dataset.url;
+    const next = "{{ next|default:'/' }}";
+
+    fetch(url, { method: "GET" }).then(res => {
+        if (res.ok) {
+            window.location.href = next;
+        }
+    });
+});
+</script>
 {% endblock %}

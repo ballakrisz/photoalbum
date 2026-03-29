@@ -159,15 +159,43 @@ document.querySelectorAll(".delete-btn").forEach(btn => {
         const url = this.dataset.url;
         const card = this.closest(".col-md-4");
 
-        fetch(url, {
-            method: "GET",  // using your current setup
-            headers: {
-                "X-Requested-With": "XMLHttpRequest"
-            }
-        }).then(res => {
+        const params = new URLSearchParams(window.location.search);
+        let page = parseInt(params.get("page") || "1");
+        const sort = params.get("sort") || "";
+
+        fetch(url, { method: "GET" }).then(res => {
             if (res.ok) {
-                // ✅ remove instantly from UI
+
+                // remove card
                 card.remove();
+
+                // fetch replacement
+                fetch(`/next-photo/?page=${page + 1}&sort=${sort}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.photo) {
+                            const row = document.querySelector(".row");
+
+                            const html = `
+                                <div class="col-md-4 mb-4">
+                                    <div class="card shadow-sm h-100">
+                                        <a href="/photo/${data.photo.id}/">
+                                            <img src="${data.photo.image}"
+                                                 class="card-img-top img-fluid"
+                                                 style="height: 250px; object-fit: cover;">
+                                        </a>
+                                        <div class="card-body">
+                                            <h5>${data.photo.name}</h5>
+                                            <p class="text-muted small">${data.photo.uploaded}</p>
+                                            <p class="text-muted small">By: ${data.photo.owner}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+
+                            row.insertAdjacentHTML("beforeend", html);
+                        }
+                    });
             }
         });
     });

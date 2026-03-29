@@ -60,6 +60,37 @@ def photo_list(request):
     })
 
 
+def next_photo(request):
+    sort = request.GET.get("sort")
+    page = int(request.GET.get("page", 1))
+
+    photos = Photo.objects.all()
+
+    if sort == "name":
+        photos = photos.order_by("name")
+    else:
+        photos = photos.order_by("-uploaded_at")
+
+    paginator = Paginator(photos, 9)
+
+    if page > paginator.num_pages:
+        return JsonResponse({"photo": None})
+
+    photo = paginator.page(page).object_list.first()
+
+    if not photo:
+        return JsonResponse({"photo": None})
+
+    return JsonResponse({
+        "photo": {
+            "id": photo.id,
+            "name": photo.name,
+            "image": photo.image.url,
+            "owner": photo.owner.username,
+            "uploaded": photo.uploaded_at.strftime("%Y-%m-%d %H:%M")
+        }
+    })
+
 #  Detail
 def photo_detail(request, pk):
     photo = get_object_or_404(Photo, pk=pk)

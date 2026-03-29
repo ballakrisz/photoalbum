@@ -8,4 +8,5 @@ urlpatterns = [
     path("delete/<int:pk>/", views.photo_delete, name="photo_delete"),
     path("delete-locust/start/", views.start_delete_locust, name="start_delete_locust"),
     path("delete-locust/progress/", views.delete_progress_view, name="delete_progress"),
+    path("next-photo/", views.next_photo, name="next_photo"),
 ]
