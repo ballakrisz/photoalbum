@@ -152,89 +152,86 @@
 </div>
 
 <script>
-document.addEventListener("click", function(e) {
+document.addEventListener("click", async function(e) {
 
-    // =========================
-    // GALLERY DELETE BUTTONS
-    // =========================
-    const deleteBtn = e.target.closest(".delete-btn");
-    if (deleteBtn) {
-        e.preventDefault();
+    const btn = e.target.closest(".delete-btn");
+    if (!btn) return;
 
-        const url = deleteBtn.dataset.url;
-        const card = deleteBtn.closest(".col-md-4");
+    e.preventDefault();
 
+    const url = btn.dataset.url;
+    const card = btn.closest(".col-md-4");
+    if (!url || !card) return;
+
+    try {
+        // delete request
+        const res = await fetch(url, { method: "GET" });
+        if (!res.ok) return;
+
+        // remove card
+        card.remove();
+
+        // collect currently visible photo IDs
+        const ids = Array.from(document.querySelectorAll(".delete-btn"))
+            .map(btn => {
+                const match = btn.dataset.url.match(/photo\/(\d+)/);
+                return match ? match[1] : null;
+            })
+            .filter(Boolean);
+
+        // get current sort
         const params = new URLSearchParams(window.location.search);
-        let page = parseInt(params.get("page") || "1");
         const sort = params.get("sort") || "";
 
-        fetch(url, { method: "GET" }).then(res => {
-            if (res.ok) {
+        // build query
+        let query = ids.map(id => `exclude[]=${id}`).join("&");
+        if (sort) query += `&sort=${sort}`;
 
-                // remove card
-                card.remove();
+        // fetch next photo
+        const nextRes = await fetch(`/next-photo/?${query}`);
+        const data = await nextRes.json();
 
-                // fetch replacement
-                fetch(`/next-photo/?page=${page + 1}&sort=${sort}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.photo) {
-                            const row = document.querySelector(".row");
+        if (!data.photo) return;
 
-                            const html = `
-                                <div class="col-md-4 mb-4">
-                                    <div class="card shadow-sm h-100">
-                                        <a href="/photo/${data.photo.id}/?next=${encodeURIComponent(window.location.pathname + window.location.search)}">
-                                            <img src="${data.photo.image}"
-                                                 class="card-img-top img-fluid"
-                                                 style="height: 250px; object-fit: cover;">
-                                        </a>
+        const row = document.querySelector(".row");
 
-                                        <div class="card-body">
-                                            <h5 class="card-title">${data.photo.name}</h5>
+        const nextParam = encodeURIComponent(window.location.pathname + window.location.search);
 
-                                            <p class="text-muted small">
-                                                Uploaded: ${data.photo.uploaded}
-                                            </p>
+        // insert new card
+        const html = `
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <a href="/photo/${data.photo.id}/?next=${nextParam}">
+                        <img src="${data.photo.image}"
+                             class="card-img-top img-fluid"
+                             style="height: 250px; object-fit: cover;">
+                    </a>
 
-                                            <p class="text-muted small">
-                                                By: ${data.photo.owner}
-                                            </p>
+                    <div class="card-body">
+                        <h5 class="card-title">${data.photo.name}</h5>
 
-                                            <a href="#"
-                                               class="btn btn-danger btn-sm delete-btn"
-                                               data-url="/photo/${data.photo.id}/delete/?next=${encodeURIComponent(window.location.pathname + window.location.search)}">
-                                                Delete
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
+                        <p class="text-muted small">
+                            Uploaded: ${data.photo.uploaded}
+                        </p>
 
-                            row.insertAdjacentHTML("beforeend", html);
-                        }
-                    });
-            }
-        });
+                        <p class="text-muted small">
+                            By: ${data.photo.owner}
+                        </p>
 
-        return; // stop here
-    }
+                        <a href="#"
+                           class="btn btn-danger btn-sm delete-btn"
+                           data-url="/photo/${data.photo.id}/delete/?next=${nextParam}">
+                            Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
 
-    // =========================
-    // DETAIL DELETE BUTTON
-    // =========================
-    const detailBtn = e.target.closest("#delete-detail");
-    if (detailBtn) {
-        e.preventDefault();
+        row.insertAdjacentHTML("beforeend", html);
 
-        const url = detailBtn.dataset.url;
-        const next = new URL(url, window.location.origin).searchParams.get("next") || "/";
-
-        fetch(url, { method: "GET" }).then(res => {
-            if (res.ok) {
-                window.location.href = next + (next.includes("?") ? "&" : "?") + "_=" + Date.now();
-            }
-        });
+    } catch (err) {
+        console.error("Delete error:", err);
     }
 
 });

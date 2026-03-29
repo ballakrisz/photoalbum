@@ -60,23 +60,25 @@ def photo_list(request):
     })
 
 
+from django.http import JsonResponse
+
 def next_photo(request):
-    sort = request.GET.get("sort")
-    page = int(request.GET.get("page", 1))
+    exclude_ids = request.GET.getlist("exclude[]")
+    sort = request.GET.get("sort", "date")
 
     photos = Photo.objects.all()
 
+    #  SAME SORT LOGIC AS GALLERY
     if sort == "name":
         photos = photos.order_by("name")
     else:
         photos = photos.order_by("-uploaded_at")
 
-    paginator = Paginator(photos, 9)
+    #  EXCLUDE ALREADY SHOWN
+    if exclude_ids:
+        photos = photos.exclude(id__in=exclude_ids)
 
-    if page > paginator.num_pages:
-        return JsonResponse({"photo": None})
-
-    photo = paginator.page(page).object_list.first()
+    photo = photos.first()
 
     if not photo:
         return JsonResponse({"photo": None})
@@ -86,8 +88,8 @@ def next_photo(request):
             "id": photo.id,
             "name": photo.name,
             "image": photo.image.url,
+            "uploaded": photo.uploaded_at.strftime("%Y-%m-%d %H:%M"),
             "owner": photo.owner.username,
-            "uploaded": photo.uploaded_at.strftime("%Y-%m-%d %H:%M")
         }
     })
 
