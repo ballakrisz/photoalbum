@@ -102,8 +102,9 @@
 
                     {% if user.is_authenticated %}
                         {% if user == photo.owner or user.is_staff %}
-                            <a href="{% url 'photo_delete' photo.pk %}"
-                               class="btn btn-danger btn-sm">
+                            <a href="{% url 'photo_delete' photo.pk %}?next={{ request.get_full_path|urlencode }}"
+                            class="btn btn-danger btn-sm"
+                            onclick="setTimeout(() => location.reload(), 50);">
                                 Delete
                             </a>
                         {% endif %}

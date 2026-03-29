@@ -114,8 +114,10 @@ def photo_upload(request):
 def photo_delete(request, pk):
     photo = Photo.objects.filter(pk=pk).first()
 
+    redirect_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or "photo_list"
+
     if not photo:
-        return redirect(request.META.get("HTTP_REFERER", "photo_list"))
+        return redirect(redirect_url)
 
     if not (request.user == photo.owner or request.user.is_staff):
         return HttpResponseForbidden("You are not allowed to delete this photo.")
@@ -125,7 +127,7 @@ def photo_delete(request, pk):
 
     photo.delete()
 
-    return redirect(request.META.get("HTTP_REFERER", "photo_list"))
+    return redirect(redirect_url)
 
 
 # Start async delete of locust stress test photos

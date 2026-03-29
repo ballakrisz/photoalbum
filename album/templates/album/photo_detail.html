@@ -23,8 +23,8 @@
 
             {% if user == photo.owner or user.is_staff %}
                 <a href="{% url 'photo_delete' photo.pk %}?next={{ next|urlencode }}"
-                   class="btn btn-danger">
-                   Delete
+                class="btn btn-danger">
+                    Delete
                 </a>
             {% endif %}
 
