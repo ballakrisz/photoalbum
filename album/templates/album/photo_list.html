@@ -44,6 +44,7 @@
             <div class="card shadow-sm h-100">
                 <a href="{% url 'photo_detail' photo.pk %}">
                     <img src="{{ photo.image.url }}"
+                         loading="lazy"
                          class="card-img-top img-fluid"
                          style="height: 250px; object-fit: cover;">
                 </a>
@@ -77,23 +78,33 @@
 </div>
 
 <!--  Pagination -->
-<div class="d-flex justify-content-center align-items-center mt-4 gap-3">
+<div class="d-flex justify-content-center align-items-center mt-4 gap-2 flex-wrap">
 
     {% if photos.has_previous %}
         <a class="btn btn-outline-primary btn-sm"
+           href="?page=1{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+            First
+        </a>
+
+        <a class="btn btn-outline-primary btn-sm"
            href="?page={{ photos.previous_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
-            ⬅ Previous
+            Previous
         </a>
     {% endif %}
 
-    <span class="text-muted">
+    <span class="mx-2">
         Page {{ photos.number }} of {{ photos.paginator.num_pages }}
     </span>
 
     {% if photos.has_next %}
         <a class="btn btn-outline-primary btn-sm"
            href="?page={{ photos.next_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
-            Next ➡
+            Next
+        </a>
+
+        <a class="btn btn-outline-primary btn-sm"
+           href="?page={{ photos.paginator.num_pages }}{% if current_sort %}&sort={{ current_sort }}{% endif %}">
+            Last
         </a>
     {% endif %}
 

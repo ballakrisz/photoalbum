@@ -8,8 +8,10 @@ from .forms import PhotoForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.views.decorators.cache import cache_page
 import os
 
+@cache_page(5)
 def photo_list(request):
     sort = request.GET.get("sort")
     page_number = request.GET.get("page")
