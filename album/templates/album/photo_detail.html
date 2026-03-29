@@ -45,17 +45,12 @@ document.getElementById("delete-detail")?.addEventListener("click", function(e) 
     e.preventDefault();
 
     const url = this.dataset.url;
+    const next = new URL(url, window.location.origin).searchParams.get("next") || "/";
 
-    fetch(url, {
-        method: "GET",
-        headers: {
-            "X-Requested-With": "XMLHttpRequest"
+    fetch(url, { method: "GET" }).then(res => {
+        if (res.ok) {
+            window.location.href = next;
         }
-    })
-    .then(res => res.json())
-    .then(data => {
-        // redirect after delete
-        window.location.href = data.redirect || "/";
     });
 });
 </script>

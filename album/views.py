@@ -161,7 +161,7 @@ def photo_delete(request, pk):
     photo.delete()
 
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse({"status": "ok", "redirect": redirect_url})
+        return JsonResponse({"status": "ok"})
 
     return redirect(redirect_url)
 
