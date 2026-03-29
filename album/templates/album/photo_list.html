@@ -164,30 +164,32 @@ document.addEventListener("click", async function(e) {
     if (!url || !card) return;
 
     try {
-        // delete request
+        // 1. DELETE
         const res = await fetch(url, { method: "GET" });
         if (!res.ok) return;
 
-        // remove card
+        // 2. REMOVE CARD
         card.remove();
 
-        // collect currently visible photo IDs
+        // 3. CURRENT PAGE + SORT
+        const params = new URLSearchParams(window.location.search);
+        const page = parseInt(params.get("page") || "1");
+        const sort = params.get("sort") || "";
+
+        // 4. CURRENTLY VISIBLE IDS
         const ids = Array.from(document.querySelectorAll(".delete-btn"))
-            .map(btn => {
-                const match = btn.dataset.url.match(/photo\/(\d+)/);
-                return match ? match[1] : null;
+            .map(b => {
+                const m = b.dataset.url.match(/photo\/(\d+)/);
+                return m ? m[1] : null;
             })
             .filter(Boolean);
 
-        // get current sort
-        const params = new URLSearchParams(window.location.search);
-        const sort = params.get("sort") || "";
-
-        // build query
+        // 5. BUILD QUERY (IMPORTANT: includes page)
         let query = ids.map(id => `exclude[]=${id}`).join("&");
+        query += `&page=${page}`;
         if (sort) query += `&sort=${sort}`;
 
-        // fetch next photo
+        // 6. FETCH CORRECT NEXT PHOTO (FROM NEXT PAGE SLICE)
         const nextRes = await fetch(`/next-photo/?${query}`);
         const data = await nextRes.json();
 
@@ -197,7 +199,7 @@ document.addEventListener("click", async function(e) {
 
         const nextParam = encodeURIComponent(window.location.pathname + window.location.search);
 
-        // insert new card
+        // 7. INSERT NEW CARD (CORRECT DATA-URL INCLUDED)
         const html = `
             <div class="col-md-4 mb-4">
                 <div class="card shadow-sm h-100">

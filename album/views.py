@@ -60,38 +60,40 @@ def photo_list(request):
     })
 
 
-from django.http import JsonResponse
-
 def next_photo(request):
     exclude_ids = request.GET.getlist("exclude[]")
     sort = request.GET.get("sort", "date")
+    page = int(request.GET.get("page", 1))
 
     photos = Photo.objects.all()
 
-    #  SAME SORT LOGIC AS GALLERY
+    # same ordering as gallery
     if sort == "name":
         photos = photos.order_by("name")
     else:
         photos = photos.order_by("-uploaded_at")
 
-    #  EXCLUDE ALREADY SHOWN
-    if exclude_ids:
-        photos = photos.exclude(id__in=exclude_ids)
+    paginator = Paginator(photos, 9) 
 
-    photo = photos.first()
-
-    if not photo:
+    try:
+        next_page = paginator.page(page + 1)
+    except:
         return JsonResponse({"photo": None})
 
-    return JsonResponse({
-        "photo": {
-            "id": photo.id,
-            "name": photo.name,
-            "image": photo.image.url,
-            "uploaded": photo.uploaded_at.strftime("%Y-%m-%d %H:%M"),
-            "owner": photo.owner.username,
-        }
-    })
+    # find first photo not currently shown
+    for photo in next_page.object_list:
+        if str(photo.id) not in exclude_ids:
+            return JsonResponse({
+                "photo": {
+                    "id": photo.id,
+                    "name": photo.name,
+                    "image": photo.image.url,
+                    "uploaded": photo.uploaded_at.strftime("%Y-%m-%d %H:%M"),
+                    "owner": photo.owner.username,
+                }
+            })
+
+    return JsonResponse({"photo": None})
 
 #  Detail
 def photo_detail(request, pk):
