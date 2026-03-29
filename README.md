@@ -519,3 +519,5 @@ During an earlier test run, I unintentionally generated over 1000 dummy images. 
 I added a `Delete Locust Photos` button, visible only to the admin user. This functionality iterates through all Locust-generated users and removes their associated images from both S3 and the database.
 
 Because this operation can involve hundreds of images and take a significant amount of time, I implemented it as an asynchronous task to avoid request timeouts.
+
+## TODO: talk about switching to Pagination, how it massively increased RPS and decreased response times (also show photos)
