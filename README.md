@@ -156,7 +156,7 @@ Because the deployment strategy was set to **RollingUpdate**, Kubernetes attempt
 - The PVC could not detach while the old pod was still running.
 - The old pod would not terminate because the new pod never became ready.
 
-The only way to resolve the situation manually was to delete the old pod, which would release the volume and allow the new pod to mount it successfully
+The only way to resolve the situation manually was to delete the old pod, which would release the volume and allow the new pod to mount it successfully.
 
 A simple solution would've been to switch the deployment strategy to **Recreate**, which termintes all running pods, before starting the new ones. But, as my future tasks include making my application **scalable**, this **RWO** PVC would prevent me from running multiple pods of my application. Thus, I decided to switch to an AWS S3 object storage as my media storage. 
 ## Why S3 Solves This Problem
