@@ -257,31 +257,265 @@ spec:
     kind: Deployment
     name: photoalbum-git
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 10
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 80
+          averageUtilization: 60
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 0
       selectPolicy: Max
       policies:
         - type: Percent
-          value: 100
-          periodSeconds: 10
-        - type: Pods
-          value: 2
-          periodSeconds: 10
+          value: 200
+          periodSeconds: 5
     scaleDown:
-      stabilizationWindowSeconds: 10
+      stabilizationWindowSeconds: 5
       selectPolicy: Max
       policies:
         - type: Percent
-          value: 100
-          periodSeconds: 10
+          value: 200
+          periodSeconds: 5
 ```
-S
+Here, I defined a maximum of 10 replicas, where a new one is started when the average CPU utilization across the pods exceeds 60%. The autoscaler monitors the CPU usage and dynamically adjusts the number of replicas to maintain this target utilization.
+
+The `scaleUp` behavior is configured to react immediately (`stabilizationWindowSeconds: 0`) and can increase the number of replicas by up to 200% every 5 seconds, allowing rapid scaling in response to sudden load spikes.
+
+The `scaleDown` behavior uses a short stabilization window of 5 seconds to prevent rapid fluctuations (thrashing) and can reduce the number of replicas by up to 200% every 5 seconds when the load decreases.
+
+Overall, this configuration ensures responsive scaling while still maintaining a small buffer against unstable scaling behavior.
+
+
+## Deployment Configuration
+```yaml
+- resources:
+    limits:
+      cpu: '2'
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 8080
+      scheme: HTTP
+    initialDelaySeconds: 5
+    timeoutSeconds: 2
+    periodSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+  terminationMessagePath: /dev/termination-log
+  name: photoalbum-git
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 8080
+      scheme: HTTP
+    initialDelaySeconds: 15
+    timeoutSeconds: 1
+    periodSeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+  env:
+    - name: APP_MODULE
+      value: 'config.wsgi:application'
+    - name: WEB_CONCURRENCY
+      value: '4'
+```
+Here, I configured resource management, health checks, and runtime behavior for the deployment to ensure stability and efficient scaling.
+
+The `resources` section defines guaranteed and maximum resource usage. Each pod requests 500 millicores of CPU and 512Mi of memory, while it can use up to 2 CPU cores and 1Gi of memory. **I had to set the request quite high, so the the app can handle the avalance of logins at the beginning of the stress test. This also applies to my postgres deployment as well**
+
+```bash
+oc set resources deployment/photoalbum-git \
+  --requests=cpu=500m,memory=512Mi \
+  --limits=cpu=2,memory=1Gi
+```  
+The `readinessProbe` checks whether the application is ready to serve traffic. It starts 5 seconds after container startup and runs every 5 seconds. If the probe fails 3 times, the pod is marked as not ready and removed from service endpoints. This helps avoid sending traffic to pods that are still initializing or temporarily unavailable.
+
+
+```bash
+oc set probe deployment/photoalbum-git \
+  --readiness \
+  --get-url=http://:8080/ \
+  --initial-delay-seconds=5 \
+  --period-seconds=5 \
+  --timeout-seconds=2 \
+  --failure-threshold=3 \
+  --success-threshold=1
+```
+
+The `livenessProbe` ensures the application is still running correctly. It starts after 15 seconds and runs every 10 seconds. If it fails repeatedly, Kubernetes restarts the container. This provides automatic recovery from deadlocks or crashes.
+```bash
+oc set probe deployment/photoalbum-git \
+  --liveness \
+  --get-url=http://:8080/ \
+  --initial-delay-seconds=15 \
+  --period-seconds=10 \
+  --timeout-seconds=1 \
+  --failure-threshold=3 \
+  --success-threshold=1
+```
+    
+
+Environment variables configure the application runtime (**Gunicorn** + concurrency). Initially a django developer runtime was used, which was really slow.
+```bash
+oc set env deployment/photoalbum-git \
+  APP_MODULE=config.wsgi:application \
+  WEB_CONCURRENCY=4
+```
+
+To ensure even load distribution, I disabled sticky sessions in OpenShift:
+```bash
+oc annotate route photoalbum-git \
+  haproxy.router.openshift.io/disable_cookies="true"
+```
+
+## Locust Load Testing Configuration
+
+To evaluate the performance and scalability of the application, I implemented a custom load-testing setup using Locust. I deployed Locust as a separate pod inside the cluster, allowing it to generate realistic internal traffic.
+
+The Locust script simulates real user behavior rather than simple HTTP requests. Each virtual user logs in with pre-created credentials, interacts with the application, and performs a mix of actions including browsing, sorting, uploading images, viewing details, and deleting photos.
+
+Key aspects of the implementation:
+
+* **Connection handling**:
+  I explicitly disabled HTTP keep-alive to simulate independent client requests and avoid connection reuse:
+
+  ```python
+  self.client.headers.update({"Connection": "close"})
+  ```
+
+* **User simulation**:
+  A pool of 50 pre-created users is cycled through to avoid registration overhead and ensure consistent authentication behavior:
+
+  ```python
+  USER_CREDENTIALS = [(f"locust_{i}", "Test12345!") for i in range(50)]
+  user_pool = cycle(USER_CREDENTIALS)
+  ```
+
+* **Realistic behavior modeling**:
+  Each user:
+
+  * Logs in with CSRF handling
+  * Views the photo list
+  * Sorts content
+  * Uploads dynamically generated images
+  * Views photo details
+  * Deletes their own photos
+
+* **Dynamic image generation**:
+  Instead of reusing static files, images are generated on the fly using Pillow:
+
+  ```python
+  img = Image.new("RGB", (64, 64), (...))
+  ```
+
+  This avoids I/O bottlenecks and better simulates real uploads.
+
+* **Stateful interactions**:
+  Each user tracks their own uploaded photo IDs, ensuring that operations like viewing and deletion behave realistically and do not interfere with other users.
+
+### Locust Configuration Using ConfigMap
+
+Instead of baking the `locustfile.py` into the Docker image, I used a ConfigMap to mount the test script directly into the Locust pod. This approach allows updating the load test logic without rebuilding or redeploying the image.
+
+First, I created a ConfigMap from the local `locustfile.py`:
+
+```bash
+oc create configmap locustfile \
+  --from-file=locustfile.py
+```
+
+Then, I mounted this ConfigMap into the Locust deployment:
+
+```bash
+oc set volume deployment/locust \
+  --add \
+  --name=locustfile-volume \
+  --mount-path=/mnt/locust \
+  --configmap-name=locustfile
+```
+
+This makes the `locustfile.py` available inside the container at:
+
+```
+/mnt/locust/locustfile.py
+```
+
+
+For dependencies (e.g., Pillow), I still use a lightweight custom image:
+
+```dockerfile
+FROM locustio/locust
+
+USER root
+RUN pip install pillow
+USER locust
+```
+
+I used this setup, as it makes iterating the test script much easier, as i don't need to rebuild or redeploy my locust image, i just update my `ConfigMap` and restart my locust pod.
+
+The `Dockerfile`, `locustfile.py`, and the user generator `start_setup.py` files can be found under the `locust` folder in the repo.
+
+---
+# Running Locust Stress Test
+
+To run the load test, I used the Locust web interface while simultaneously observing application behavior and Kubernetes scaling in real time. The process is documented through a sequence of screenshots, where the timestamp on my local machine serves as a reference timeline.
+
+## Before
+
+The initial state of the S3 bucket and OpenShift pods was as follows:
+
+![S3 before](docs/s3_before.png)
+![pods before](docs/pods_before.png)
+
+This was also reflected in the application, which initially contained only two photos:
+
+![app before](docs/app_before.png)
+
+The Locust UI was exposed via an OpenShift route, enabling configuration directly from the browser. I configured the test to simulate 50 users with a spawn rate of 1 user per second.
+
+![Locust Config](docs/locust_config.png)
+
+## During
+
+During the test execution, all 50 users logged in successfully and generated approximately 65 requests per second:
+
+![Locust during](docs/locust_during.png)
+
+As a result of the increased load, the Horizontal Pod Autoscaler scaled the deployment up to 4 pods:
+
+![pods during](docs/pods_during.png)
+
+## After
+
+After running Locust for about 2–3 minutes, I stopped the test. At this point, a large number of test ("dummy") images had been generated:
+
+![s3 after](docs/s3_after.png)
+![app after](docs/app_after.png)
+
+The Locust statistics show a gradual increase in both requests per second and response time during the ramp-up phase, primarily due to the cost of user login. Once all users were active, the request rate stabilized while response times decreased as the system adapted to the steady load.
+
+![Locust stats](docs/locust_stats.png)
+
+Only a small number of failures occurred. These were mainly caused by users attempting to access images that had already been deleted by their owners:
+
+![Locust errors](docs/locust_errors.png)
+
+After some time, the system correctly scaled back down to a single pod, demonstrating that both scaling up and scaling down function as expected:
+
+![pods after](docs/pods_after_load_gone.png)
+
+## Locust Cleanup
+
+During an earlier test run, I unintentionally generated over 1000 dummy images. Since deleting them manually from both S3 and the database would be impractical, I implemented a dedicated cleanup feature.
+
+I added a `Delete Locust Photos` button, visible only to the admin user. This functionality iterates through all Locust-generated users and removes their associated images from both S3 and the database.
+
+Because this operation can involve hundreds of images and take a significant amount of time, I implemented it as an asynchronous task to avoid request timeouts.

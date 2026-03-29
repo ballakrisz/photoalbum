@@ -4,9 +4,15 @@ from PIL import Image
 import io
 import random
 import string
+from itertools import cycle
+import time
+
+# PRE-CREATED USERS
+USER_CREDENTIALS = [(f"locust_{i}", "Test12345!") for i in range(50)]
+user_pool = cycle(USER_CREDENTIALS)
 
 class PhotoAlbumUser(HttpUser):
-    wait_time = between(1, 2)
+    wait_time = between(0.5, 1)
 
     def get_csrf_token(self, response):
         match = re.search(r'name="csrfmiddlewaretoken" value="(.+?)"', response.text)
@@ -38,34 +44,24 @@ class PhotoAlbumUser(HttpUser):
         return ids
 
     def on_start(self):
-        self.username = f"locust_{self.random_string()}"
-        self.password = "StressTest0"
+        self.client.headers.update({"Connection": "close"})
+
+        # 🔹 assign unique user
+        self.username, self.password = next(user_pool)
+
         self.my_photo_ids = []
         self.logged_in = False
 
-        for _ in range(3):  # try register + login 3 times
+        # 🔹 LOGIN only (no register!)
+        for attempt in range(3):
             try:
-                #  REGISTER
-                response = self.client.get("/register/")
-                csrf_token = self.get_csrf_token(response)
-
-                self.client.post(
-                    "/register/",
-                    data={
-                        "username": self.username,
-                        "password1": self.password,
-                        "password2": self.password,
-                        "csrfmiddlewaretoken": csrf_token,
-                        "next": "/",
-                    },
-                    headers={"Referer": self.host + "/register/"}
-                )
-
-                # LOGIN
                 response = self.client.get("/accounts/login/")
                 csrf_token = self.get_csrf_token(response)
 
-                self.client.post(
+                if not csrf_token:
+                    continue
+
+                res = self.client.post(
                     "/accounts/login/",
                     data={
                         "username": self.username,
@@ -73,30 +69,33 @@ class PhotoAlbumUser(HttpUser):
                         "csrfmiddlewaretoken": csrf_token,
                         "next": "/",
                     },
-                    headers={"Referer": self.host + "/accounts/login/"}
+                    headers={"Referer": self.host + "/accounts/login/"},
+                    timeout=10
                 )
 
-                # CHECK LOGIN (if register was succesfull)
                 check = self.client.get("/")
 
-                if f"Hello, {self.username}" in check.text:
+                if check.status_code == 200 and "logout" in check.text.lower():
                     self.logged_in = True
                     print("LOGIN SUCCESS:", self.username)
-                    break
+                    return
 
-            except Exception:
-                pass
+            except Exception as e:
+                print("Login error:", e)
 
-            self.wait()
+            # 🔥 BACKOFF
+            sleep_time = random.uniform(1, 3)
+            time.sleep(sleep_time)
+
+        print("❌ LOGIN FAILED:", self.username)
 
     # VIEWING POHOTO LIST
-    @task(3)
+    @task(1)
     def index(self):
         if not self.logged_in:
             return
 
         response = self.client.get("/")
-        print(response.text)
 
         # update owned photo IDs
         new_ids = self.extract_my_photo_ids(response.text)
@@ -189,47 +188,3 @@ class PhotoAlbumUser(HttpUser):
 
         self.client.get(f"/delete/{photo_id}/")
         self.my_photo_ids.remove(photo_id)
-
-    #  LOGOUT + LOGIN again (session churn)
-    @task(1)
-    def logout_login(self):
-        if not self.logged_in:
-            return
-
-        # get page to extract CSRF
-        response = self.client.get("/")
-        csrf_token = self.get_csrf_token(response)
-
-        # fallback: try login page if not found
-        if not csrf_token:
-            response = self.client.get("/accounts/login/")
-            csrf_token = self.get_csrf_token(response)
-
-        # POST logout
-        self.client.post(
-            "/accounts/logout/",
-            data={
-                "csrfmiddlewaretoken": csrf_token,
-                "next": "/",
-            },
-            headers={"Referer": self.host + "/"}
-        )
-        self.logged_in = False
-
-        # log back in
-        response = self.client.get("/accounts/login/")
-        csrf_token = self.get_csrf_token(response)
-
-        self.client.post(
-            "/accounts/login/",
-            data={
-                "username": self.username,
-                "password": self.password,
-                "csrfmiddlewaretoken": csrf_token,
-                "next": "/",
-            },
-            headers={"Referer": self.host + "/accounts/login/"}
-        )
-        check = self.client.get("/")
-        if f"Hello, {self.username}" in check.text:
-            self.logged_in = True
