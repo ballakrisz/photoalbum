@@ -102,9 +102,9 @@
 
                     {% if user.is_authenticated %}
                         {% if user == photo.owner or user.is_staff %}
-                            <a href="{% url 'photo_delete' photo.pk %}?next={{ request.get_full_path|urlencode }}"
-                            class="btn btn-danger btn-sm"
-                            onclick="setTimeout(() => location.reload(), 50);">
+                            <a href="#"
+                            class="btn btn-danger btn-sm delete-btn"
+                            data-url="{% url 'photo_delete' photo.pk %}?next={{ request.get_full_path|urlencode }}">
                                 Delete
                             </a>
                         {% endif %}
@@ -151,4 +151,26 @@
 
 </div>
 
+<script>
+document.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.addEventListener("click", function(e) {
+        e.preventDefault();
+
+        const url = this.dataset.url;
+        const card = this.closest(".col-md-4");
+
+        fetch(url, {
+            method: "GET",  // using your current setup
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        }).then(res => {
+            if (res.ok) {
+                // ✅ remove instantly from UI
+                card.remove();
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
