@@ -88,16 +88,21 @@ def photo_delete(request, pk):
 
 @staff_member_required
 def delete_locust_photos(request):
-    try:
-        locust_user = User.objects.get(username="locust")
-    except User.DoesNotExist:
-        return redirect("photo_list")
+    #  Get all locust users
+    locust_users = User.objects.filter(username__startswith="locust_")
 
-    photos = Photo.objects.filter(owner=locust_user)
+    # Get all their photos
+    photos = Photo.objects.filter(owner__in=locust_users)
 
+    # Delete images from S3 FIRST
     for photo in photos:
-        photo.image.delete(save=False)  # delete from S3
-        photo.delete()                  # delete DB row
+        photo.image.delete(save=False)
+
+    # Delete photo rows
+    photos.delete()
+
+    # Delete users
+    locust_users.delete()
 
     return redirect("photo_list")
 
