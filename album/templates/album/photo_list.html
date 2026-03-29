@@ -152,18 +152,17 @@
 </div>
 
 <script>
-// 🔥 ONE global handler (works for existing + future elements)
 document.addEventListener("click", function(e) {
 
     // =========================
     // GALLERY DELETE BUTTONS
     // =========================
-    if (e.target.classList.contains("delete-btn")) {
+    const deleteBtn = e.target.closest(".delete-btn");
+    if (deleteBtn) {
         e.preventDefault();
 
-        const btn = e.target;
-        const url = btn.dataset.url;
-        const card = btn.closest(".col-md-4");
+        const url = deleteBtn.dataset.url;
+        const card = deleteBtn.closest(".col-md-4");
 
         const params = new URLSearchParams(window.location.search);
         let page = parseInt(params.get("page") || "1");
@@ -175,7 +174,7 @@ document.addEventListener("click", function(e) {
                 // remove card
                 card.remove();
 
-                // load replacement
+                // fetch replacement
                 fetch(`/next-photo/?page=${page + 1}&sort=${sort}`)
                     .then(res => res.json())
                     .then(data => {
@@ -217,20 +216,22 @@ document.addEventListener("click", function(e) {
                     });
             }
         });
+
+        return; // stop here
     }
 
     // =========================
     // DETAIL DELETE BUTTON
     // =========================
-    if (e.target.id === "delete-detail") {
+    const detailBtn = e.target.closest("#delete-detail");
+    if (detailBtn) {
         e.preventDefault();
 
-        const url = e.target.dataset.url;
+        const url = detailBtn.dataset.url;
         const next = new URL(url, window.location.origin).searchParams.get("next") || "/";
 
         fetch(url, { method: "GET" }).then(res => {
             if (res.ok) {
-                // 🔥 FORCE fresh reload (bypass cache ONLY here)
                 window.location.href = next + (next.includes("?") ? "&" : "?") + "_=" + Date.now();
             }
         });
