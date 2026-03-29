@@ -29,12 +29,20 @@
 
     <!-- Right: Delete button -->
     {% if user.is_staff %}
-        <button id="delete-btn" class="btn btn-danger btn-sm">
-            Delete Locust Photos
-        </button>
+        <div class="d-flex align-items-center gap-3">
 
-        <div class="progress mt-2" style="height: 20px; max-width: 300px;">
-            <div id="progress-bar" class="progress-bar" style="width: 0%">0%</div>
+            <!-- Progress bar (left, visible) -->
+            <div class="progress flex-grow-1" style="height: 20px; max-width: 300px;">
+                <div id="progress-bar" class="progress-bar bg-danger" style="width: 0%">
+                    0%
+                </div>
+            </div>
+
+            <!-- Delete button (right) -->
+            <button id="delete-btn" class="btn btn-danger btn-sm">
+                Delete Locust Photos
+            </button>
+
         </div>
 
         <script>
