@@ -32,7 +32,7 @@
         <div class="d-flex align-items-center gap-3">
 
             <!-- Progress bar (left, visible) -->
-            <div class="progress flex-grow-1" style="height: 20px; max-width: 300px;">
+            <div class="progress flex-grow-1" style="height: 25px; width: 100%; max-width: 600px;">
                 <div id="progress-bar" class="progress-bar bg-danger" style="width: 0%">
                     0%
                 </div>
@@ -47,6 +47,7 @@
 
         <script>
         document.getElementById("delete-btn").onclick = function() {
+
             fetch("{% url 'start_delete_locust' %}", {
                 method: "POST",
                 headers: {
@@ -64,10 +65,14 @@
 
                                 bar.style.width = percent + "%";
                                 bar.innerText = percent + "%";
+                            }
 
-                                if (!data.running) {
-                                    clearInterval(interval);
-                                }
+                            // ✅ WHEN DONE → STOP + REFRESH (NO CACHE)
+                            if (!data.running) {
+                                clearInterval(interval);
+
+                                const current = window.location.pathname + window.location.search;
+                                window.location.href = current + (current.includes("?") ? "&" : "?") + "_=" + Date.now();
                             }
                         });
                 }, 500);
