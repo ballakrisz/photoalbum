@@ -93,7 +93,7 @@ def delete_locust_photos(request):
     except User.DoesNotExist:
         return redirect("index")
 
-    photos = Photo.objects.filter(user=locust_user)
+    photos = Photo.objects.filter(owner=locust_user)
 
     for photo in photos:
         photo.image.delete(save=False)  # delete from S3
