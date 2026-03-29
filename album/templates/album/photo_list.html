@@ -29,12 +29,44 @@
 
     <!-- Right: Delete button -->
     {% if user.is_staff %}
-        <form method="post" action="{% url 'delete_locust_photos' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger btn-sm">
-                Delete Locust Photos
-            </button>
-        </form>
+        <button id="delete-btn" class="btn btn-danger btn-sm">
+            Delete Locust Photos
+        </button>
+
+        <div class="progress mt-2" style="height: 20px; max-width: 300px;">
+            <div id="progress-bar" class="progress-bar" style="width: 0%">0%</div>
+        </div>
+
+        <script>
+        document.getElementById("delete-btn").onclick = function() {
+            fetch("{% url 'start_delete_locust' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"
+                }
+            }).then(() => {
+
+                const interval = setInterval(() => {
+                    fetch("{% url 'delete_progress' %}")
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.total > 0) {
+                                const percent = Math.floor((data.deleted / data.total) * 100);
+                                const bar = document.getElementById("progress-bar");
+
+                                bar.style.width = percent + "%";
+                                bar.innerText = percent + "%";
+
+                                if (!data.running) {
+                                    clearInterval(interval);
+                                }
+                            }
+                        });
+                }, 500);
+
+            });
+        };
+        </script>
     {% endif %}
 </div>
 
