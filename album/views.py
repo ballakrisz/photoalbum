@@ -27,7 +27,6 @@ def delete_locust_photos_task():
 
     delete_progress["total"] = len(photos)
     delete_progress["deleted"] = 0
-    delete_progress["running"] = True
 
     for photo in photos:
         if photo.image:
@@ -178,6 +177,7 @@ def start_delete_locust(request):
     if delete_progress["running"]:
         return JsonResponse({"status": "already running"})
 
+    delete_progress["running"] = True  # Set before Thread start
     thread = threading.Thread(target=delete_locust_photos_task)
     thread.start()
 

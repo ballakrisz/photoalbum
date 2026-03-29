@@ -53,31 +53,32 @@
                 headers: {
                     "X-CSRFToken": "{{ csrf_token }}"
                 }
-            }).then(() => {
-
-                const interval = setInterval(() => {
-                    fetch("{% url 'delete_progress' %}")
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.total > 0) {
-                                const percent = Math.floor((data.deleted / data.total) * 100);
-                                const bar = document.getElementById("progress-bar");
-
-                                bar.style.width = percent + "%";
-                                bar.innerText = percent + "%";
-                            }
-
-                            // ✅ WHEN DONE → STOP + REFRESH (NO CACHE)
-                            if (!data.running) {
-                                clearInterval(interval);
-
-                                const current = window.location.pathname + window.location.search;
-                                window.location.href = current + (current.includes("?") ? "&" : "?") + "_=" + Date.now();
-                            }
-                        });
-                }, 500);
-
             });
+
+            const bar = document.getElementById("progress-bar");
+
+            const interval = setInterval(() => {
+                fetch("{% url 'delete_progress' %}")
+                    .then(res => res.json())
+                    .then(data => {
+
+                        // 🔥 WAIT UNTIL WE HAVE VALID TOTAL
+                        if (data.total === 0) return;
+
+                        const percent = Math.floor((data.deleted / data.total) * 100);
+
+                        bar.style.width = percent + "%";
+                        bar.innerText = percent + "%";
+
+                        // ✅ ONLY finish when actually done
+                        if (!data.running && data.deleted === data.total) {
+                            clearInterval(interval);
+
+                            const current = window.location.pathname + window.location.search;
+                            window.location.href = current + (current.includes("?") ? "&" : "?") + "_=" + Date.now();
+                        }
+                    });
+            }, 500);
         };
         </script>
     {% endif %}
