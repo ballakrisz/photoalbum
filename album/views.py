@@ -125,8 +125,7 @@ def photo_delete(request, pk):
     return redirect("photo_list")
 
 @staff_member_required
-def delete_locust_photos(request):
-    #  Get all locust users
+def start_delete_locust(request):
     global delete_progress
 
     if delete_progress["running"]:
