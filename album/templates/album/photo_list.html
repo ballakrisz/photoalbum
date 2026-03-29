@@ -9,28 +9,33 @@
             Upload Photo
         </a>
     {% endif %}
+</div>
 
+<!-- Row 2: Sort (left) + Delete (right) -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <!-- Left: Sorting -->
+    <div class="btn-group">
+        <a href="?sort=name"
+           class="btn btn-sm {% if current_sort == 'name' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            Sort by Name
+        </a>
+
+        <a href="?sort=date"
+           class="btn btn-sm {% if current_sort == 'date' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            Sort by Date
+        </a>
+    </div>
+
+    <!-- Right: Delete button -->
     {% if user.is_staff %}
-        <form method="post" action="{% url 'delete_locust_photos' %}" style="display:inline;">
+        <form method="post" action="{% url 'delete_locust_photos' %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger">
+            <button type="submit" class="btn btn-danger btn-sm">
                 Delete Locust Photos
             </button>
         </form>
     {% endif %}
-</div>
-
-<!-- 🔽 Sorting -->
-<div class="btn-group mb-4">
-    <a href="?sort=name"
-       class="btn btn-sm {% if current_sort == 'name' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-        Sort by Name
-    </a>
-
-    <a href="?sort=date"
-       class="btn btn-sm {% if current_sort == 'date' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-        Sort by Date
-    </a>
 </div>
 
 
