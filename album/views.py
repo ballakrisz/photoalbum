@@ -4,12 +4,40 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import redirect
 from django.contrib.auth.models import User
+from django.http import JsonResponse
 from .forms import PhotoForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.views.decorators.cache import cache_page
 import os
+import threading
+
+delete_progress = {
+    "total": 0,
+    "deleted": 0,
+    "running": False
+}
+
+def delete_locust_photos_task():
+    from django.contrib.auth.models import User
+    from .models import Photo
+
+    global delete_progress
+
+    locust_users = User.objects.filter(username__startswith="locust_")
+    photos = list(Photo.objects.filter(owner__in=locust_users))
+
+    delete_progress["total"] = len(photos)
+    delete_progress["deleted"] = 0
+    delete_progress["running"] = True
+
+    for photo in photos:
+        if photo.image:
+            photo.image.delete(save=False)
+        photo.delete()
+
+        delete_progress["deleted"] += 1
 
 @cache_page(5)
 def photo_list(request):
@@ -84,7 +112,10 @@ def photo_upload(request):
 
 @login_required
 def photo_delete(request, pk):
-    photo = get_object_or_404(Photo, pk=pk)
+    photo = Photo.objects.filter(pk=pk).first()
+
+    if not photo:
+        return redirect("photo_list")
 
     if not (request.user == photo.owner or request.user.is_staff):
         return HttpResponseForbidden("You are not allowed to delete this photo.")
@@ -96,19 +127,18 @@ def photo_delete(request, pk):
 @staff_member_required
 def delete_locust_photos(request):
     #  Get all locust users
-    locust_users = User.objects.filter(username__startswith="locust_")
+    global delete_progress
 
-    # Get all their photos
-    photos = Photo.objects.filter(owner__in=locust_users)
+    if delete_progress["running"]:
+        return JsonResponse({"status": "already running"})
 
-    # Delete images from S3 FIRST
-    for photo in photos.iterator():
-        photo.image.delete(save=False)
+    thread = threading.Thread(target=delete_locust_photos_task)
+    thread.start()
 
-    # Delete photo rows
-    photos.delete()
+    return JsonResponse({"status": "started"})
 
-    return redirect("photo_list")
+def delete_progress_view(request):
+    return JsonResponse(delete_progress)
 
 def register(request):
     if request.method == "POST":
