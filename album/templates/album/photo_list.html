@@ -160,13 +160,19 @@ document.addEventListener("click", async function(e) {
     e.preventDefault();
 
     const url = btn.dataset.url;
+    const card = btn.closest(".col-md-4");
 
     try {
         const res = await fetch(url, { method: "GET" });
         if (!res.ok) return;
 
-        // 🔥 HARD REFRESH (guaranteed correct state)
-        window.location.href = window.location.pathname + window.location.search;
+        // ✅ remove immediately (so user sees instant feedback)
+        if (card) {
+            card.remove();
+        }
+
+        // ✅ then force reload (correct state guaranteed)
+        window.location.reload();
 
     } catch (err) {
         console.error("Delete failed:", err);
