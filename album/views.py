@@ -97,7 +97,7 @@ def photo_detail(request, pk):
 
     return render(request, "album/photo_detail.html", {
         "photo": photo,
-        "next": request.GET.get("next") 
+        "next": request.GET.get("next") or "/"  # fallback
     })
 
 
@@ -145,18 +145,23 @@ def photo_upload(request):
 def photo_delete(request, pk):
     photo = Photo.objects.filter(pk=pk).first()
 
-    redirect_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or "photo_list"
+    redirect_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or "/"
 
     if not photo:
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"status": "ok"})
         return redirect(redirect_url)
 
     if not (request.user == photo.owner or request.user.is_staff):
-        return HttpResponseForbidden("You are not allowed to delete this photo.")
+        return HttpResponseForbidden("Not allowed")
 
     if photo.image:
         photo.image.delete(save=False)
 
     photo.delete()
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"status": "ok", "redirect": redirect_url})
 
     return redirect(redirect_url)
 

@@ -23,9 +23,9 @@
 
             {% if user == photo.owner or user.is_staff %}
                 <a href="#"
-                class="btn btn-danger"
                 id="delete-detail"
-                data-url="{% url 'photo_delete' photo.pk %}?next={{ next|urlencode }}">
+                data-url="{% url 'photo_delete' photo.pk %}?next={{ next|urlencode }}"
+                class="btn btn-danger">
                     Delete
                 </a>
             {% endif %}
@@ -45,12 +45,17 @@ document.getElementById("delete-detail")?.addEventListener("click", function(e) 
     e.preventDefault();
 
     const url = this.dataset.url;
-    const next = "{{ next|default:'/' }}";
 
-    fetch(url, { method: "GET" }).then(res => {
-        if (res.ok) {
-            window.location.href = next;
+    fetch(url, {
+        method: "GET",
+        headers: {
+            "X-Requested-With": "XMLHttpRequest"
         }
+    })
+    .then(res => res.json())
+    .then(data => {
+        // redirect after delete
+        window.location.href = data.redirect || "/";
     });
 });
 </script>
