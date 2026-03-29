@@ -504,7 +504,7 @@ The Locust statistics show a gradual increase in both requests per second and re
 
 ![Locust stats](docs/locust_stats.png)
 
-Only a small number of failures occurred. These were mainly caused by users attempting to access images that had already been deleted by their owners:
+Only a small number of failures occurred, primarily due to users attempting to access images that had already been deleted. While this behavior will be improved in the future, it highlights the benefit of using Locust, as it exposes realistic race conditions that arise under concurrent usage.
 
 ![Locust errors](docs/locust_errors.png)
 
