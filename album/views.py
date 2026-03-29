@@ -7,22 +7,27 @@ from django.contrib.auth.models import User
 from .forms import PhotoForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
+from django.core.paginator import Paginator
 import os
 
 def photo_list(request):
     sort = request.GET.get("sort")
+    page_number = request.GET.get("page")
 
     photos = Photo.objects.all()
 
+    # Sorting 
     if sort == "name":
         photos = photos.order_by("name")
-    elif sort == "date":
-        photos = photos.order_by("-uploaded_at")
     else:
         photos = photos.order_by("-uploaded_at")
 
+    # Pagination (9 per page to match my UI)
+    paginator = Paginator(photos, 9)
+    photos_page = paginator.get_page(page_number)
+
     return render(request, "album/photo_list.html", {
-        "photos": photos,
+        "photos": photos_page,
         "current_sort": sort
     })
 
