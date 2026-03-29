@@ -9,6 +9,15 @@
             Upload Photo
         </a>
     {% endif %}
+
+    {% if user.is_staff %}
+        <form method="post" action="{% url 'delete_locust_photos' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+                Delete Locust Photos
+            </button>
+        </form>
+    {% endif %}
 </div>
 
 <!-- 🔽 Sorting -->

@@ -1,6 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Photo
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import redirect
+from django.contrib.auth.models import User
 from .forms import PhotoForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
@@ -82,6 +85,21 @@ def photo_delete(request, pk):
     photo.image.delete(save=False)  # delete photo from S3
     photo.delete()                  # delet DB row
     return redirect("photo_list")
+
+@staff_member_required
+def delete_locust_photos(request):
+    try:
+        locust_user = User.objects.get(username="locust")
+    except User.DoesNotExist:
+        return redirect("index")
+
+    photos = Photo.objects.filter(user=locust_user)
+
+    for photo in photos:
+        photo.image.delete(save=False)  # delete from S3
+        photo.delete()                  # delete DB row
+
+    return redirect("index")
 
 def register(request):
     if request.method == "POST":
