@@ -2,27 +2,24 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Photo
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from django.shortcuts import redirect
 from django.contrib.auth.models import User
-from django.http import JsonResponse
-from .forms import PhotoForm
-from django.contrib.auth.forms import UserCreationForm
+from django.http import JsonResponse, HttpResponseForbidden
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.views.decorators.cache import cache_page
 import os
 import threading
 
+# Progress tracker
 delete_progress = {
     "total": 0,
     "deleted": 0,
     "running": False
 }
 
-def delete_locust_photos_task():
-    from django.contrib.auth.models import User
-    from .models import Photo
 
+# Background delete task
+def delete_locust_photos_task():
     global delete_progress
 
     locust_users = User.objects.filter(username__startswith="locust_")
@@ -36,9 +33,12 @@ def delete_locust_photos_task():
         if photo.image:
             photo.image.delete(save=False)
         photo.delete()
-
         delete_progress["deleted"] += 1
 
+    delete_progress["running"] = False  # reset after done
+
+
+# Gallery view
 @cache_page(5)
 def photo_list(request):
     sort = request.GET.get("sort")
@@ -46,13 +46,11 @@ def photo_list(request):
 
     photos = Photo.objects.all()
 
-    # Sorting 
     if sort == "name":
         photos = photos.order_by("name")
     else:
         photos = photos.order_by("-uploaded_at")
 
-    # Pagination (9 per page to match my UI)
     paginator = Paginator(photos, 9)
     photos_page = paginator.get_page(page_number)
 
@@ -61,40 +59,36 @@ def photo_list(request):
         "current_sort": sort
     })
 
+
+#  Detail
 def photo_detail(request, pk):
     photo = get_object_or_404(Photo, pk=pk)
+    return render(request, "album/photo_detail.html", {"photo": photo})
 
-    return render(request, "album/photo_detail.html", {
-        "photo": photo
-    })
 
+# Upload (preserve sorting/page)
 @login_required
 def photo_upload(request):
     if request.method == "POST":
         name = request.POST.get("name")
         image = request.FILES.get("image")
 
-        # Name validation
         if not name or len(name) > 40:
             messages.error(request, "Photo name must be 40 characters or less.")
             return render(request, "album/photo_upload.html")
 
-        # File exists
         if not image:
             messages.error(request, "Please select an image.")
             return render(request, "album/photo_upload.html")
 
-        # Size check (2MB)
         if image.size > 2 * 1024 * 1024:
             messages.error(request, "Image size must be less than 2MB.")
             return render(request, "album/photo_upload.html")
 
-        # MIME type check
         if not image.content_type.startswith("image/"):
             messages.error(request, "Only image files are allowed.")
             return render(request, "album/photo_upload.html")
 
-        # Extension check
         ext = os.path.splitext(image.name)[1].lower()
         if ext not in [".jpg", ".jpeg", ".png", ".gif"]:
             messages.error(request, "Only JPG, PNG or GIF images are allowed.")
@@ -106,24 +100,31 @@ def photo_upload(request):
             owner=request.user
         )
 
-        return redirect("photo_list")
+        return redirect(request.META.get("HTTP_REFERER", "photo_list"))
 
     return render(request, "album/photo_upload.html")
 
+
+#  Delete (idempotent + preserve state)
 @login_required
 def photo_delete(request, pk):
     photo = Photo.objects.filter(pk=pk).first()
 
     if not photo:
-        return redirect("photo_list")
+        return redirect(request.META.get("HTTP_REFERER", "photo_list"))
 
     if not (request.user == photo.owner or request.user.is_staff):
         return HttpResponseForbidden("You are not allowed to delete this photo.")
 
-    photo.image.delete(save=False)  # delete photo from S3
-    photo.delete()                  # delet DB row
-    return redirect("photo_list")
+    if photo.image:
+        photo.image.delete(save=False)
 
+    photo.delete()
+
+    return redirect(request.META.get("HTTP_REFERER", "photo_list"))
+
+
+# Start async delete of locust stress test photos
 @staff_member_required
 def start_delete_locust(request):
     global delete_progress
@@ -136,10 +137,16 @@ def start_delete_locust(request):
 
     return JsonResponse({"status": "started"})
 
+
+#  Progress endpoint
 def delete_progress_view(request):
     return JsonResponse(delete_progress)
 
+
+#  Register
 def register(request):
+    from django.contrib.auth.forms import UserCreationForm
+
     if request.method == "POST":
         form = UserCreationForm(request.POST)
         if form.is_valid():
