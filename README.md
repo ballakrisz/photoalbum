@@ -520,4 +520,17 @@ I added a `Delete Locust Photos` button, visible only to the admin user. This fu
 
 Because this operation can involve hundreds of images and take a significant amount of time, I implemented it as an asynchronous task to avoid request timeouts.
 
-## TODO: talk about switching to Pagination, how it massively increased RPS and decreased response times (also show photos)
+# Lessons learned by using Locust stress test.
+
+My application uses a card-based gallery view that displays a snippet of stored images, which are shown in actual size when clicked. While this provides a clean and visually appealing user experience, stress testing with Locust revealed significant performance issues, as shown below:
+
+![locust no pagi](docs/locust_with_no_pagination.png)
+![locust no pagi errors](docs/locust_no_pagination_errors.png)
+
+The response times were extremely high, and as more users accessed the system concurrently, timout failures began to appear. These failures were primarily caused by the backend attempting to load and return all images at once without any form of pagination or lazy loading. This resulted in excessive memory usage, increased database query times, and network congestion due to large payload sizes.
+
+Additionally, the server struggled to handle the growing number of simultaneous requests, leading to timeouts and dropped connections. The lack of caching and inefficient image handling further amplified the issue, making the system unsuitable for scaling under real-world usage.
+
+From this, I learned that even visually simple features like image galleries can become major bottlenecks if not designed with scalability in mind. To address these issues, I implemented pagination, caching, and other optimizations to significantly improve performance and stability under load.  
+![Locust during](docs/locust_during.png)
+Here, we can see that the response times **drastically** decreaed (by a magnitude of 100), and also the timeout errors ceased.
