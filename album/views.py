@@ -7,6 +7,7 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.views.decorators.cache import cache_page
+from django.urls import reverse
 import os
 import threading
 
@@ -138,7 +139,8 @@ def photo_upload(request):
             owner=request.user
         )
 
-        return redirect(request.META.get("HTTP_REFERER", "photo_list"))
+        next_url = request.GET.get("next") or reverse("photo_list")
+        return redirect(next_url)
 
     return render(request, "album/photo_upload.html")
 
