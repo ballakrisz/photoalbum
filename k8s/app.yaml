@@ -92,7 +92,7 @@ spec:
         - name: DJANGO_SUPERUSER_EMAIL
           value: admin@example.com
         - name: DJANGO_SUPERUSER_PASSWORD
-          value: admin123
+          value: admin000
 
         envFrom:
         - secretRef:
