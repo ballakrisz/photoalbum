@@ -20,6 +20,11 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
+    - name: Write kubeconfig
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+
     - name: Terraform Init
       run: terraform init
 

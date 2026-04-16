@@ -1,9 +1,15 @@
+terraform {
+  backend "s3" {
+    bucket = "photoalbum-skicpausz-media"
+    key    = "terraform/state.tfstate"
+    region = "eu-north-1"
+  }
+}
+
 provider "aws" {
   region = "eu-north-1"
 }
-provider "kubernetes" {
-  config_path = "~/.kube/config"
-}
+provider "kubernetes" {}
 
 # -----------------------
 # S3 BUCKET
