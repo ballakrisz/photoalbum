@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["photoalbum-git-skicpausz-dev.apps.rm1.0a51.p1.openshiftapps.com"]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.openshiftapps.com",
