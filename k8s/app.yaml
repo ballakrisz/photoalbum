@@ -76,6 +76,10 @@ spec:
         - name: DB_HOST
           value: postgres
 
+        envFrom:
+        - secretRef:
+            name: s3-credentials
+
 ---
 # ---------------------------
 # DJANGO SERVICE
