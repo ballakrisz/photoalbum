@@ -169,3 +169,20 @@ spec:
     app: postgres
   ports:
     - port: 5432
+
+
+---
+# ---------------------------
+# ROLE BINDING FOR GITHUBK WEBHOOK
+# ---------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: webhook-access
+subjects:
+- kind: Group
+  name: system:unauthenticated
+roleRef:
+  kind: ClusterRole
+  name: system:webhook
+  apiGroup: rbac.authorization.k8s.io
