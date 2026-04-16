@@ -9,6 +9,11 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
 
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: eu-north-1
+
     defaults:
       run:
         working-directory: terraform
@@ -36,6 +41,4 @@ jobs:
     - name: Terraform Apply
       run: terraform apply -auto-approve
       env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         KUBECONFIG: ${{ github.workspace }}/terraform/kubeconfig.yaml
