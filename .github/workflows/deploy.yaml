@@ -32,3 +32,6 @@ jobs:
     - name: Apply OpenShift YAML
       run: |
         oc apply -f k8s/app.yaml
+
+    - name: Restart deployment
+      run: oc rollout restart deployment photoalbum-git
