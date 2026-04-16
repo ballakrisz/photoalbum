@@ -16,9 +16,6 @@ metadata:
   name: photoalbum-git
 spec:
   triggers:
-  - type: GitHub
-    github:
-      secret: mysecret123
   - type: ConfigChange
   - type: ImageChange
   source:
@@ -88,7 +85,7 @@ spec:
         - name: DB_HOST
           value: postgres
         - name: DJANGO_SUPERUSER_USERNAME
-          value: admin1
+          value: admin
         - name: DJANGO_SUPERUSER_EMAIL
           value: admin@example.com
         - name: DJANGO_SUPERUSER_PASSWORD

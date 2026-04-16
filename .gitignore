@@ -6,3 +6,11 @@ staticfiles/
 *.pyc
 .env
 tmp.py
+# Terraform
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+
+# Optional (safe)
+*.tfstate
+*.tfstate.backup

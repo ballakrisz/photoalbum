@@ -1,0 +1,34 @@
+name: Build Image
+
+on:
+  push:
+    paths:
+      - 'album/**'
+      - 'config/**'
+      - 'manage.py'
+      - 'requirements.txt'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install oc
+      run: |
+        curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/oc/latest/linux/oc.tar.gz
+        tar -xvf oc.tar.gz
+        sudo mv oc /usr/local/bin
+
+    - name: Login
+      run: |
+        oc login ${{ secrets.OPENSHIFT_SERVER }} \
+          --token=${{ secrets.OPENSHIFT_TOKEN }} \
+          --insecure-skip-tls-verify=true
+
+    - name: Select project
+      run: oc project ${{ secrets.OPENSHIFT_NAMESPACE }}
+
+    - name: Trigger build
+      run: oc start-build photoalbum-git
