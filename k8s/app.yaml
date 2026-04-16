@@ -46,6 +46,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: photoalbum-git
+  labels:
+    app: photoalbum-git
   annotations:
     image.openshift.io/triggers: |
       [{"from":{"kind":"ImageStreamTag","name":"photoalbum-git:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"photoalbum-git\")].image"}]
@@ -58,12 +60,18 @@ spec:
     metadata:
       labels:
         app: photoalbum-git
+        deployment: photoalbum-git
     spec:
       containers:
       - name: photoalbum-git
         image: image-registry.openshift-image-registry.svc:5000/skicpausz-dev/photoalbum-git:latest
+        
+        command: ["gunicorn"]
+        args: ["config.wsgi:application", "--bind", "0.0.0.0:8080"]
+
         ports:
         - containerPort: 8080
+
         env:
         - name: APP_MODULE
           value: config.wsgi:application
@@ -91,9 +99,12 @@ metadata:
 spec:
   selector:
     app: photoalbum-git
+    deployment: photoalbum-git
   ports:
-    - port: 80
-      targetPort: 8080
+  - name: 8080-tcp
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
 
 ---
 # ---------------------------
@@ -108,7 +119,9 @@ spec:
     kind: Service
     name: photoalbum-git
   port:
-    targetPort: 80
+    targetPort: 8080-tcp
+  tls:
+    termination: edge
 
 ---
 # ---------------------------
@@ -175,7 +188,9 @@ spec:
   selector:
     app: postgres
   ports:
-    - port: 5432
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
 
 
 ---
