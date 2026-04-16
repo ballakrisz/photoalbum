@@ -10,3 +10,4 @@ typing_extensions==4.15.0
 whitenoise==6.11.0
 django-storages
 boto3
+gunicorn

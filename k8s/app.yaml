@@ -1,0 +1,171 @@
+# ---------------------------
+# IMAGESTREAM
+# ---------------------------
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: photoalbum-git
+
+---
+# ---------------------------
+# BUILDCONFIG 
+# ---------------------------
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: photoalbum-git
+spec:
+  triggers:
+  - type: ConfigChange
+  - type: ImageChange
+  source:
+    type: Git
+    git:
+      uri: https://github.com/ballakrisz/photoalbum.git
+      ref: main
+  strategy:
+    type: Source
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: python:3.12-minimal-ubi10
+        namespace: openshift
+  output:
+    to:
+      kind: ImageStreamTag
+      name: photoalbum-git:latest
+
+---
+# ---------------------------
+# DJANGO DEPLOYMENT
+# ---------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: photoalbum-git
+  annotations:
+    image.openshift.io/triggers: |
+      [{"from":{"kind":"ImageStreamTag","name":"photoalbum-git:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"photoalbum-git\")].image"}]
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: photoalbum-git
+  template:
+    metadata:
+      labels:
+        app: photoalbum-git
+    spec:
+      containers:
+      - name: photoalbum-git
+        image: image-registry.openshift-image-registry.svc:5000/skicpausz-dev/photoalbum-git:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: APP_MODULE
+          value: config.wsgi:application
+        - name: POSTGRES_DB
+          value: photoalbumdb
+        - name: POSTGRES_USER
+          value: photoalbum
+        - name: POSTGRES_PASSWORD
+          value: photoalbum123
+        - name: DB_HOST
+          value: postgres
+
+---
+# ---------------------------
+# DJANGO SERVICE
+# ---------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: photoalbum-git
+spec:
+  selector:
+    app: photoalbum-git
+  ports:
+    - port: 80
+      targetPort: 8080
+
+---
+# ---------------------------
+# ROUTE (PUBLIC ACCESS)
+# ---------------------------
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: photoalbum-git
+spec:
+  to:
+    kind: Service
+    name: photoalbum-git
+  port:
+    targetPort: 80
+
+---
+# ---------------------------
+# POSTGRES PVC
+# ---------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+# ---------------------------
+# POSTGRES DEPLOYMENT
+# ---------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: registry.redhat.io/rhel9/postgresql-15
+        env:
+        - name: POSTGRESQL_USER
+          value: photoalbum
+        - name: POSTGRESQL_PASSWORD
+          value: photoalbum123
+        - name: POSTGRESQL_DATABASE
+          value: photoalbumdb
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/pgsql/data
+          name: data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: postgres-data-pvc
+
+---
+# ---------------------------
+# POSTGRES SERVICE
+# ---------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
