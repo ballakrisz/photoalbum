@@ -9,7 +9,14 @@ terraform {
 provider "aws" {
   region = "eu-north-1"
 }
-provider "kubernetes" {}
+
+provider "kubernetes" {
+  config_path = var.kubeconfig_path
+}
+
+variable "kubeconfig_path" {
+  type = string
+}
 
 # -----------------------
 # S3 BUCKET
