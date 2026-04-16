@@ -62,21 +62,29 @@ resource "aws_iam_user" "photoalbum_user" {
 resource "aws_iam_policy" "photoalbum_policy" {
   name = "PhotoAlbumS3Access"
 
-  policy = jsonencode({
+    policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      {
+        {
         Sid = "AllowPhotoBucketAccess"
         Effect = "Allow"
         Action = [
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:DeleteObject"
+            "s3:PutObject",
+            "s3:GetObject",
+            "s3:DeleteObject"
         ]
         Resource = "${aws_s3_bucket.photoalbum.arn}/*"
-      }
+        },
+        {
+        Sid = "AllowBucketAccess"
+        Effect = "Allow"
+        Action = [
+            "s3:ListBucket"
+        ]
+        Resource = aws_s3_bucket.photoalbum.arn
+        }
     ]
-  })
+    })
 }
 
 # -----------------------
