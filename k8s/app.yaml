@@ -88,11 +88,11 @@ spec:
         - name: DB_HOST
           value: postgres
         - name: DJANGO_SUPERUSER_USERNAME
-          value: admin
+          value: admin1
         - name: DJANGO_SUPERUSER_EMAIL
           value: admin@example.com
         - name: DJANGO_SUPERUSER_PASSWORD
-          value: admin111
+          value: admin123
 
         envFrom:
         - secretRef:
