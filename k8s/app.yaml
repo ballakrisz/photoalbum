@@ -16,6 +16,9 @@ metadata:
   name: photoalbum-git
 spec:
   triggers:
+  - type: GitHub
+    github:
+      secret: mysecret123
   - type: ConfigChange
   - type: ImageChange
   source:
