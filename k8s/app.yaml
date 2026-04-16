@@ -66,8 +66,12 @@ spec:
       - name: photoalbum-git
         image: image-registry.openshift-image-registry.svc:5000/skicpausz-dev/photoalbum-git:latest
         
-        command: ["gunicorn"]
-        args: ["config.wsgi:application", "--bind", "0.0.0.0:8080"]
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            python manage.py migrate &&
+            python manage.py createsuperuser --noinput || true &&
+            gunicorn config.wsgi:application --bind 0.0.0.0:8080
 
         ports:
         - containerPort: 8080
@@ -83,6 +87,12 @@ spec:
           value: photoalbum123
         - name: DB_HOST
           value: postgres
+        - name: DJANGO_SUPERUSER_USERNAME
+          value: admin
+        - name: DJANGO_SUPERUSER_EMAIL
+          value: admin@example.com
+        - name: DJANGO_SUPERUSER_PASSWORD
+          value: admin123
 
         envFrom:
         - secretRef:
