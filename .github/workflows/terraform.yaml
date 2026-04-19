@@ -27,6 +27,12 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
+    - name: Install oc
+      run: |
+        curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/oc/latest/linux/oc.tar.gz
+        tar -xvf oc.tar.gz
+        sudo mv oc /usr/local/bin
+
     - name: Login to OpenShift
       run: |
         oc login ${{ secrets.OPENSHIFT_SERVER }} \
