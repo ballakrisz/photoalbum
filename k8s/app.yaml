@@ -85,7 +85,7 @@ spec:
         - name: DB_HOST
           value: postgres
         - name: DJANGO_SUPERUSER_USERNAME
-          value: admin
+          value: admin123
         - name: DJANGO_SUPERUSER_EMAIL
           value: admin@example.com
         - name: DJANGO_SUPERUSER_PASSWORD
