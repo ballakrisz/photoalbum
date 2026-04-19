@@ -120,4 +120,4 @@ resource "kubernetes_secret_v1" "s3_credentials" {
   type = "Opaque"
 }
 
-#trigger
+#trigger 
