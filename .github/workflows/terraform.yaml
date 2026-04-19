@@ -27,10 +27,11 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
-    - name: Write kubeconfig
+    - name: Login to OpenShift
       run: |
-        mkdir -p ~/.kube
-        echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+        oc login ${{ secrets.OPENSHIFT_SERVER }} \
+          --token=${{ secrets.OPENSHIFT_TOKEN }} \
+          --insecure-skip-tls-verify=true
 
     - name: Terraform Init
       run: terraform init
