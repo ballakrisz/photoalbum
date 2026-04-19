@@ -534,3 +534,152 @@ Additionally, the server struggled to handle the growing number of simultaneous 
 From this, I learned that even visually simple features like image galleries can become major bottlenecks if not designed with scalability in mind. To address these issues, I implemented pagination, caching, and other optimizations to significantly improve performance and stability under load.  
 ![Locust during](docs/locust_during.png)
 Here, we can see that the response times **drastically** decreaed (by a magnitude of 100), and also the timeout errors ceased.
+
+
+# Infrastructure as Code (IaC)
+
+To make the deployment reproducible and automated, I implemented an Infrastructure as Code setup using **Terraform**, **OpenShift manifests**, and **GitHub Actions**. The goal was to avoid manual configuration both in AWS and OpenShift, and instead manage everything from version-controlled files.
+
+---
+
+## Terraform
+
+Terraform is responsible for provisioning and configuring external resources and integrating them with the cluster.
+
+### What it manages
+
+- **AWS S3 bucket**
+  - Stores uploaded images
+
+- **IAM user for the application**
+  - `photoalbum-django`
+  - Restricted access to the S3 bucket only
+
+- **Access keys**
+  - Generated automatically
+
+- **Kubernetes Secret**
+  - Created directly from Terraform
+  - Injected into OpenShift
+  - Contains AWS credentials and bucket name
+
+This ensures that the application can access S3 without any manual secret creation.
+
+### Terraform State Management
+
+The Terraform state is stored remotely in S3.
+
+This ensures:
+- Persistent state tracking
+- Safe re-application of infrastructure
+- No local state issues
+
+---
+
+## OpenShift Manifests (`app.yaml`)
+
+The application itself is also defined as code using Kubernetes/OpenShift YAML files.
+
+This includes:
+
+- Deployment (Django application)
+- Service
+- Route
+- Environment variables
+- Secret references
+
+Instead of configuring these through the OpenShift web UI, everything is stored in `app.yaml`.
+
+### What this enables
+
+- The entire application can be recreated with a single command:
+
+  ```bash
+  oc apply -f app.yaml
+  ```
+
+- No manual configuration
+- Version-controlled deployment changes
+
+### Important detail
+
+The deployment is tightly integrated with:
+
+- **Terraform-generated secrets** (S3 credentials)
+- **ImageStream builds** (new images trigger new pods)
+
+This means the application, infrastructure, and secrets are all connected through code.
+
+---
+
+## GitHub Actions (CI/CD)
+
+To automate everything, I created three separate workflows.
+
+---
+
+### 1. Terraform Workflow
+
+Triggered on changes in the `terraform/` folder
+
+- Runs `terraform apply`
+- Updates infrastructure
+- Refreshes Kubernetes secrets
+
+---
+
+### 2. Deploy Workflow
+
+Triggered on changes in deployment YAML files in the `k8s/` folder
+
+- Applies `app.yaml`
+- Updates the running application
+
+---
+
+### 3. Build Workflow
+
+Initially, a webhook was configured between OpenShift and GitHub that automatically triggered a build on every new commit. While this ensured continuous integration, it proved to be too coarse-grained for the project’s needs.
+
+The webhook mechanism did not distinguish between different types of changes. As a result, builds were triggered even when modifications were unrelated to the actual application runtime, such as:
+- Changes to Terraform configuration files
+- Updates to `app.yaml`
+- Edits to documentation (e.g., `README.md`)
+
+This caused several issues:
+- **Unnecessary builds:** Images were rebuilt when nothing important changed.
+- **Wasted resources:** Time and compute power were used without benefit.
+
+Because of this, the webhook-based approach was not suitable anymore, therefore a github Action is now responsible to trigger rebuild when onl when the actual application code changes
+
+---
+
+
+## Why IaC Was Important
+
+Without IaC, the following had to be done manually:
+
+- Creating AWS resources
+- Managing credentials
+- Creating OpenShift deployments
+- Updating configurations
+
+This was slow and error-prone. Which I experimented first hand, when my initial 30 day free trial ended on Developer Sandbox and I had recofngiure the entire application and infrastructure manually, which was painful to say the least..
+
+With IaC:
+
+- Infrastructure + application are both defined in code
+- Deployment is fully reproducible
+- No manual UI configuration is required
+- Changes are traceable through Git
+
+---
+
+## Summary
+
+The IaC setup ensures that:
+
+- Cloud resources are provisioned automatically (Terraform)
+- Application deployment is defined declaratively (`app.yaml`)
+- Secrets are synchronized between AWS and OpenShift
+- CI/CD pipelines handle build and deployment
