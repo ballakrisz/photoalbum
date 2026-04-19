@@ -654,6 +654,21 @@ Because of this, the webhook-based approach was not suitable anymore, therefore 
 
 ---
 
+## Authentication & CI/CD Integration (OpenShift)
+
+Initially, OpenShift authentication in the CI/CD pipelines was done using a token generated via `oc login` and stored in GitHub Secrets. While this worked at first, it caused issues over time because these tokens are tied to user sessions and eventually expire. This resulted in failing workflows (e.g., `Unauthorized` errors during Terraform runs).
+
+### Solution: Service Account
+
+To make the pipelines stable and fully automated, authentication was migrated to a **service account**.
+
+A dedicated service account (`github-actions`) was created in OpenShift and granted permissions within the project namespace. A token was generated for this account and stored as a GitHub Secret (`OPENSHIFT_TOKEN`).
+
+Both workflows (Terraform and deployment) now authenticate using:
+
+```bash
+oc login <server> --token=$OPENSHIFT_TOKEN
+```
 
 ## Why IaC Was Important
 
@@ -672,14 +687,3 @@ With IaC:
 - Deployment is fully reproducible
 - No manual UI configuration is required
 - Changes are traceable through Git
-
----
-
-## Summary
-
-The IaC setup ensures that:
-
-- Cloud resources are provisioned automatically (Terraform)
-- Application deployment is defined declaratively (`app.yaml`)
-- Secrets are synchronized between AWS and OpenShift
-- CI/CD pipelines handle build and deployment
